@@ -366,4 +366,14 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
         return "OK";
     }
 
+    @Override
+    public String[] listarAnuncios() {
+        return anuncios.stream()
+                .map(a -> "[" + a.getDataCriacao() + "] " +
+                        a.getAutorEmail() + ": " +
+                        a.getConteudo() +
+                        " (" + a.getLocal() + ")")
+                .toArray(String[]::new);
+    }
+
 }
