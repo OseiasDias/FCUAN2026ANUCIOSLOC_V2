@@ -1,32 +1,37 @@
 import 'package:flutter/material.dart';
 
 class Constantes {
-  // URLs dos Servidores - USAR TEU IP (192.168.8.239)
-  static const String urlBase = 'http://192.168.8.239:8082';
-  static const String urlAutenticacao = 'http://192.168.8.239:8085/auth';
+  // ==================== URLs DOS SERVIDORES ====================
+  static const String ipServidor = '10.192.31.128';
+
+  static const String portaApi = '8082';
+  static const String portaAuth = '8085';
+
+  static const String urlBase = 'http://$ipServidor:$portaApi';
+  static const String urlAutenticacao = 'http://$ipServidor:$portaAuth/auth';
   static const String urlApi = '$urlBase/ws/anunciosloc';
 
-  // Namespaces SOAP
+  // ==================== SOAP NAMESPACES ====================
   static const String namespace = 'http://service.server.anunciosloc.pt/';
   static const String namespaceAuth = 'http://service.auth.anunciosloc.pt/';
 
-  // Timeouts
+  // ==================== TIMEOUT ====================
   static const int tempoEspera = 15;
 
-  // Chaves para SharedPreferences
+  // ==================== SHARED PREFERENCES ====================
   static const String chaveEmail = 'email';
   static const String chaveTicket = 'ticket_id';
   static const String chaveLogado = 'logado';
   static const String chaveNome = 'nome';
 
-  // Cores
+  // ==================== CORES ====================
   static const Color corPrincipal = Color(0xFF6200EE);
   static const Color corSecundaria = Color(0xFF03DAC5);
   static const Color corFundo = Color(0xFFF5F5F5);
   static const Color corErro = Color(0xFFB00020);
   static const Color corSucesso = Color(0xFF4CAF50);
 
-  // Textos
+  // ==================== TEXTOS ====================
   static const String nomeApp = 'AnunciosLoc';
   static const String descricaoApp = 'Sistema de Anúncios por Localização';
   static const String sucessoLogin = 'Login realizado com sucesso!';

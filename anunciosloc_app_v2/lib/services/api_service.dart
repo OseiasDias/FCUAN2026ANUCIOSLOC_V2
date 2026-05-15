@@ -11,8 +11,7 @@ class ApiService {
     required String nome,
   }) async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
@@ -58,8 +57,7 @@ class ApiService {
 
   static Future<bool> cadastrarNoKerberos(String email, String senha) async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespaceAuth}">
   <soap:Body>
@@ -94,8 +92,7 @@ class ApiService {
     required String senha,
   }) async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespaceAuth}">
   <soap:Body>
@@ -119,10 +116,8 @@ class ApiService {
 
       if (resposta.statusCode == 200) {
         final documento = XmlDocument.parse(resposta.body);
-        final ticketId = documento
-            .findAllElements('ticketId')
-            .firstOrNull
-            ?.innerText;
+        final ticketId =
+            documento.findAllElements('ticketId').firstOrNull?.innerText;
 
         if (ticketId != null) {
           final saldo = await consultarSaldo(email);
@@ -146,8 +141,7 @@ class ApiService {
 
   static Future<int> consultarSaldo(String email) async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
@@ -170,10 +164,8 @@ class ApiService {
 
       if (resposta.statusCode == 200) {
         final documento = XmlDocument.parse(resposta.body);
-        final saldo = documento
-            .findAllElements('return')
-            .firstOrNull
-            ?.innerText;
+        final saldo =
+            documento.findAllElements('return').firstOrNull?.innerText;
 
         return int.tryParse(saldo ?? '0') ?? 0;
       }
@@ -192,8 +184,7 @@ class ApiService {
     required String local,
   }) async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
@@ -227,8 +218,7 @@ class ApiService {
     required String local,
   }) async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
@@ -267,12 +257,49 @@ class ApiService {
 
   static Future<List<String>> listarUtilizadores() async {
     try {
-      final envelope =
-          '''<?xml version="1.0" encoding="utf-8"?>
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
     <ns:listarUtilizadores/>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final resposta = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+              'SOAPAction': '',
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      if (resposta.statusCode == 200) {
+        final documento = XmlDocument.parse(resposta.body);
+
+        return documento
+            .findAllElements('return')
+            .map((e) => e.innerText)
+            .toList();
+      }
+
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<List<String>> listarMeusAnuncios(String email) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:listarMeusAnuncios>
+      <email>$email</email>
+    </ns:listarMeusAnuncios>
   </soap:Body>
 </soap:Envelope>''';
 

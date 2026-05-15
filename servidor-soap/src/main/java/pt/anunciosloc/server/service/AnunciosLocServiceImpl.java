@@ -376,4 +376,15 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
                 .toArray(String[]::new);
     }
 
+  
+
+    @Override
+    public String[] listarAnunciosPorUtilizador(String email) {
+        return anuncios.stream()
+                .filter(a -> a.getAutorEmail().equalsIgnoreCase(email))
+                .map(a -> "[" + a.getDataCriacao() + "] " +
+                        a.getConteudo() +
+                        " (" + a.getLocal() + ")")
+                .toArray(String[]::new);
+    }
 }

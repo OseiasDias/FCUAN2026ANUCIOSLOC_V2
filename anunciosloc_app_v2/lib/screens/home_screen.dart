@@ -6,6 +6,7 @@ import 'postar_anuncio_screen.dart';
 import 'receber_anuncios_screen.dart';
 import 'perfil_screen.dart';
 import 'login_screen.dart';
+import 'meus_anuncios_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -166,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ).then((_) => _carregarDados());
                           },
                         ),
+
                         _botaoMenu(
                           icone: Icons.download,
                           titulo: 'Receber',
@@ -180,6 +182,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                         ),
+
+                        // NOVO BOTÃO
+                        _botaoMenu(
+                          icone: Icons.list_alt,
+                          titulo: 'Meus Anúncios',
+                          subtitulo: 'Gerir publicados',
+                          cor: Colors.red,
+                          aoClicar: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const MeusAnunciosScreen(),
+                              ),
+                            );
+                          },
+                        ),
+
                         _botaoMenu(
                           icone: Icons.person,
                           titulo: 'Perfil',
@@ -194,6 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ).then((_) => _carregarDados());
                           },
                         ),
+
                         _botaoMenu(
                           icone: Icons.location_on,
                           titulo: 'Locais',
