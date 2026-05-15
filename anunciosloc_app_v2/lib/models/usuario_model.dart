@@ -1,27 +1,30 @@
-class UsuarioModel {
-  final String email;
-  final String nome;
-  final int saldo;
-  final String? ticketId;
+class AnuncioModel {
+  final DateTime data;
+  final String titulo;
+  final String local;
 
-  UsuarioModel({
-    required this.email,
-    required this.nome,
-    required this.saldo,
-    this.ticketId,
+  AnuncioModel({
+    required this.data,
+    required this.titulo,
+    required this.local,
   });
 
-  factory UsuarioModel.fromJson(Map<String, dynamic> json) => UsuarioModel(
-        email: json['email'] ?? '',
-        nome: json['nome'] ?? '',
-        saldo: json['saldo'] ?? 0,
-        ticketId: json['ticketId'],
-      );
+  factory AnuncioModel.fromRaw(String raw) {
+    final regex = RegExp(r'\[(.*?)\]\s*(.*?)\s*\((.*?)\)');
+    final match = regex.firstMatch(raw);
 
-  Map<String, dynamic> toJson() => {
-        'email': email,
-        'nome': nome,
-        'saldo': saldo,
-        'ticketId': ticketId,
-      };
+    if (match == null) {
+      return AnuncioModel(
+        data: DateTime.now(),
+        titulo: raw,
+        local: 'Desconhecido',
+      );
+    }
+
+    return AnuncioModel(
+      data: DateTime.parse(match.group(1)!),
+      titulo: match.group(2)!,
+      local: match.group(3)!,
+    );
+  }
 }

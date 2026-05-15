@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 import '../utils/constantes.dart';
+import '../models/anuncio_model.dart';
 
 class ApiService {
   // ==================== UTILIZADORES ====================
@@ -291,7 +292,7 @@ class ApiService {
     }
   }
 
-  static Future<List<String>> listarMeusAnuncios(String email) async {
+  static Future<List<AnuncioModel>> listarMeusAnuncios(String email) async {
     try {
       final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
@@ -303,24 +304,23 @@ class ApiService {
   </soap:Body>
 </soap:Envelope>''';
 
-      final resposta = await http
-          .post(
-            Uri.parse(Constantes.urlApi),
-            headers: {
-              'Content-Type': 'text/xml; charset=utf-8',
-              'SOAPAction': '',
-            },
-            body: envelope,
-          )
-          .timeout(const Duration(seconds: Constantes.tempoEspera));
+      final resposta = await http.post(
+        Uri.parse(Constantes.urlApi),
+        headers: {
+          'Content-Type': 'text/xml; charset=utf-8',
+          'SOAPAction': '',
+        },
+        body: envelope,
+      );
 
       if (resposta.statusCode == 200) {
-        final documento = XmlDocument.parse(resposta.body);
+        final doc = XmlDocument.parse(resposta.body);
 
-        return documento
-            .findAllElements('return')
-            .map((e) => e.innerText)
-            .toList();
+        final items = doc.findAllElements('item');
+
+        return items.map((e) {
+          return AnuncioModel.fromSoap(e.innerText);
+        }).toList();
       }
 
       return [];
