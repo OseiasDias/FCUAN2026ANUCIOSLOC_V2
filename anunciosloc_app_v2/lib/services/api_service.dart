@@ -297,9 +297,9 @@ class ApiService {
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
-    <ns:listarMeusAnuncios>
+    <ns:listarAnunciosPorUtilizador>
       <email>$email</email>
-    </ns:listarMeusAnuncios>
+    </ns:listarAnunciosPorUtilizador>
   </soap:Body>
 </soap:Envelope>''';
 
@@ -325,6 +325,7 @@ class ApiService {
 
       return [];
     } catch (e) {
+      print("ERRO listarMeusAnuncios: $e");
       return [];
     }
   }

@@ -20,9 +20,21 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
   }
 
   Future<void> carregar() async {
-    String email = await Preferencias.getEmail();
-    anuncios = await ApiService.listarMeusAnuncios(email);
-    setState(() => carregando = false);
+    try {
+      String email = await Preferencias.getEmail();
+
+      final result = await ApiService.listarMeusAnuncios(email);
+
+      setState(() {
+        anuncios = result;
+        carregando = false;
+      });
+    } catch (e) {
+      setState(() {
+        anuncios = [];
+        carregando = false;
+      });
+    }
   }
 
   @override
