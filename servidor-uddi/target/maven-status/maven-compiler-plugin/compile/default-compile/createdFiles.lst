@@ -1,0 +1,4 @@
+pt\anunciosloc\uddi\UDDIServer.class
+pt\anunciosloc\uddi\service\UDDIService.class
+pt\anunciosloc\uddi\service\UDDIServiceImpl.class
+pt\anunciosloc\uddi\model\ServicoRegistado.class

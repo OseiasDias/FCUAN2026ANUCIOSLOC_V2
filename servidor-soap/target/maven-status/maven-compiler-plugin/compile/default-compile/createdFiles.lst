@@ -1,0 +1,8 @@
+pt\anunciosloc\server\publisher\ServidorPublisher.class
+pt\anunciosloc\server\service\AnunciosLocServiceImpl.class
+pt\anunciosloc\server\model\Anuncio.class
+pt\anunciosloc\server\model\Utilizador.class
+pt\anunciosloc\server\quorum\QuorumManager.class
+pt\anunciosloc\server\client\InfraClient.class
+pt\anunciosloc\server\model\Infraestrutura.class
+pt\anunciosloc\server\service\AnunciosLocService.class
