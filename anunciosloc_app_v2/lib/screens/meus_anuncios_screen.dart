@@ -43,90 +43,102 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Meus Anúncios"),
-        centerTitle: true,
-      ),
-      body: carregando
-          ? const Center(child: CircularProgressIndicator())
-          : anuncios.isEmpty
-              ? const Center(
-                  child: Text(
-                    "Nenhum anúncio encontrado",
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: anuncios.length,
-                  itemBuilder: (context, index) {
-                    final anuncio = anuncios[index];
+        appBar: AppBar(
+          title: const Text("Meus Anúncios"),
+          centerTitle: true,
+        ),
+        body: carregando
+            ? const Center(child: CircularProgressIndicator())
+            : anuncios.isEmpty
+                ? const Center(
+                    child: Text(
+                      "Nenhum anúncio encontrado",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: anuncios.length,
+                    itemBuilder: (context, index) {
+                      final anuncio = anuncios[index];
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "${anuncio.data.day}/${anuncio.data.month}/${anuncio.data.year} "
-                              "${anuncio.data.hour}:${anuncio.data.minute.toString().padLeft(2, '0')}",
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              anuncio.conteudo,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on,
-                                    size: 16, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Text(
-                                  anuncio.local,
-                                  style: const TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.edit,
-                                      color: Colors.blue),
-                                  onPressed: () {},
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.payment,
-                                      color: Colors.green),
-                                  onPressed: () {},
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      color: Colors.red),
-                                  onPressed: () {},
-                                ),
-                              ],
-                            ),
-                          ],
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      ),
-                    );
-                  },
-                ),
-    );
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // DATA
+                              Text(
+                                "${anuncio.data.day.toString().padLeft(2, '0')}/"
+                                "${anuncio.data.month.toString().padLeft(2, '0')}/"
+                                "${anuncio.data.year}  "
+                                "${anuncio.data.hour.toString().padLeft(2, '0')}:"
+                                "${anuncio.data.minute.toString().padLeft(2, '0')}",
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // CONTEÚDO
+                              Text(
+                                anuncio.conteudo,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              // LOCAL
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on,
+                                      size: 16, color: Colors.grey),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    anuncio.local,
+                                    style: const TextStyle(color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // AÇÕES
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit,
+                                        color: Colors.blue),
+                                    onPressed: () {},
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.payment,
+                                        color: Colors.green),
+                                    onPressed: () {},
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        color: Colors.red),
+                                    onPressed: () {},
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ));
   }
 }

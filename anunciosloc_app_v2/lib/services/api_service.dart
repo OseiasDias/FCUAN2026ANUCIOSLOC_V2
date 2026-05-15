@@ -304,6 +304,49 @@ class ApiService {
   </soap:Body>
 </soap:Envelope>''';
 
+      final resposta = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      if (resposta.statusCode == 200) {
+        final doc = XmlDocument.parse(resposta.body);
+
+        final items = doc.findAllElements('item');
+
+        return items.map((e) => AnuncioModel.fromSoap(e.innerText)).toList();
+      }
+
+      return [];
+    } catch (e) {
+      print("ERRO listarMeusAnuncios: $e");
+      return [];
+    }
+  }
+
+  static Future<bool> editarPerfil({
+    required String email,
+    required String novoEmail,
+    required String novoNome,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:editarUtilizador>
+      <email>$email</email>
+      <novoEmail>$novoEmail</novoEmail>
+      <novoNome>$novoNome</novoNome>
+    </ns:editarUtilizador>
+  </soap:Body>
+</soap:Envelope>''';
+
       final resposta = await http.post(
         Uri.parse(Constantes.urlApi),
         headers: {
@@ -314,19 +357,13 @@ class ApiService {
       );
 
       if (resposta.statusCode == 200) {
-        final doc = XmlDocument.parse(resposta.body);
-
-        final items = doc.findAllElements('item');
-
-        return items.map((e) {
-          return AnuncioModel.fromSoap(e.innerText);
-        }).toList();
+        return true;
       }
 
-      return [];
+      return false;
     } catch (e) {
-      print("ERRO listarMeusAnuncios: $e");
-      return [];
+      print("ERRO editarPerfil: $e");
+      return false;
     }
   }
 }
