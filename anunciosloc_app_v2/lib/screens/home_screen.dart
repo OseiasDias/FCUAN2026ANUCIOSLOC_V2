@@ -17,6 +17,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _email = '';
+  String _nome = '';
   int _saldo = 0;
   bool _carregando = true;
 
@@ -28,7 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _carregarDados() async {
     _email = await Preferencias.getEmail();
+    _nome = await Preferencias.getNome();
     _saldo = await ApiService.consultarSaldo(_email);
+
     setState(() => _carregando = false);
   }
 
@@ -49,10 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                // Fechar o diálogo
                 Navigator.of(context).pop();
 
-                // Mostrar loading
                 showDialog(
                   context: context,
                   barrierDismissible: false,
@@ -61,10 +62,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 );
 
-                // Limpar preferências
                 await Preferencias.sair();
 
-                // Navegar para o login
                 if (mounted) {
                   Navigator.pushReplacement(
                     context,
@@ -75,7 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
               ),
-              child: const Text('Sair', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Sair',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
@@ -102,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  // CARD DO PERFIL
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
@@ -110,7 +113,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Constantes.corPrincipal.withOpacity(0.1),
+                              color: Constantes.corPrincipal
+                                  .withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -123,14 +127,29 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                // NOME
+                                Text(
+                                  _nome.isNotEmpty ? _nome : "Sem nome",
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 4),
+
+                                // EMAIL
                                 Text(
                                   _email,
                                   style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                    color: Colors.grey,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
+
+                                const SizedBox(height: 6),
+
+                                // SALDO
                                 Text(
                                   'Saldo: $_saldo pontos',
                                   style: const TextStyle(
@@ -146,7 +165,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 24),
+
+                  // GRID DE BOTÕES
                   Expanded(
                     child: GridView.count(
                       crossAxisCount: 2,
@@ -167,7 +189,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ).then((_) => _carregarDados());
                           },
                         ),
-
                         _botaoMenu(
                           icone: Icons.download,
                           titulo: 'Receber',
@@ -182,8 +203,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                         ),
-
-                        // NOVO BOTÃO
                         _botaoMenu(
                           icone: Icons.list_alt,
                           titulo: 'Meus Anúncios',
@@ -198,7 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                         ),
-
                         _botaoMenu(
                           icone: Icons.person,
                           titulo: 'Perfil',
@@ -213,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ).then((_) => _carregarDados());
                           },
                         ),
-
                         _botaoMenu(
                           icone: Icons.location_on,
                           titulo: 'Locais',
@@ -254,8 +271,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 12),
               Text(
                 titulo,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
