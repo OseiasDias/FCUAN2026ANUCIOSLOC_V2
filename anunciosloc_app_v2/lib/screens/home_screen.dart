@@ -5,6 +5,7 @@ import '../utils/constantes.dart';
 import 'postar_anuncio_screen.dart';
 import 'receber_anuncios_screen.dart';
 import 'perfil_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,10 +32,54 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _sair() async {
-    await Preferencias.sair();
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar saída'),
+          content: const Text('Tem certeza que deseja sair da sua conta?'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                // Fechar o diálogo
+                Navigator.of(context).pop();
+
+                // Mostrar loading
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+
+                // Limpar preferências
+                await Preferencias.sair();
+
+                // Navegar para o login
+                if (mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text('Sair', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -42,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(Constantes.nomeApp),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -173,7 +219,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: InkWell(
         onTap: aoClicar,
         borderRadius: BorderRadius.circular(16),
