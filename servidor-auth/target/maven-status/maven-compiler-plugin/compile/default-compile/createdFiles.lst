@@ -1,3 +1,6 @@
 pt\anunciosloc\auth\service\AuthServiceImpl.class
+pt\anunciosloc\auth\repository\UtilizadorAuthRepository.class
+pt\anunciosloc\auth\config\ConnectionFactory.class
 pt\anunciosloc\auth\AuthServer.class
+pt\anunciosloc\auth\repository\TicketRepository.class
 pt\anunciosloc\auth\service\AuthService.class

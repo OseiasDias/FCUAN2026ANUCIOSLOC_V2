@@ -1,8 +1,17 @@
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\client\InfraClient.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\config\ConnectionFactory.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Anuncio.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Infraestrutura.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Utilizador.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\publisher\ServidorPublisher.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\quorum\QuorumManager.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\AnuncioRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\ComentarioRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\InfraestruturaRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\ReplicaSaldoRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\RestricaoRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\SessaoRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\UtilizadorRepository.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\VisualizacaoRepository.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\service\AnunciosLocService.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\service\AnunciosLocServiceImpl.java

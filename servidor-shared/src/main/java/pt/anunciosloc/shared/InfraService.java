@@ -6,7 +6,7 @@ import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.Style;
 
-@WebService
+@WebService(targetNamespace = "http://service.infra.anunciosloc.pt/")
 @SOAPBinding(style = Style.RPC)
 public interface InfraService {
     

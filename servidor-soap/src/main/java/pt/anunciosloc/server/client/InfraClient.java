@@ -19,9 +19,9 @@ public class InfraClient {
             QName qname = new QName("http://service.infra.anunciosloc.pt/", "InfraServiceImplService");
             Service soapService = Service.create(wsdlUrl, qname);
             this.service = soapService.getPort(InfraService.class);
-            System.out.println("✅ Cliente conectado a: " + url);
+            System.out.println("Cliente conectado a: " + url);
         } catch (Exception e) {
-            System.err.println("❌ Erro ao conectar com " + url + ": " + e.getMessage());
+            System.err.println("Erro ao conectar com " + url + ": " + e.getMessage());
         }
     }
     
@@ -52,6 +52,7 @@ public class InfraClient {
             String resposta = service.ping();
             return resposta != null && resposta.contains("ativa");
         } catch (Exception e) {
+            System.err.println("Erro no ping: " + e.getMessage());
             return false;
         }
     }

@@ -6,7 +6,8 @@ import pt.anunciosloc.infra.repository.InfraRepository;
 import pt.anunciosloc.infra.repository.SaldoRepository;
 import java.sql.SQLException;
 
-@WebService(endpointInterface = "pt.anunciosloc.infra.service.InfraService")
+@WebService(endpointInterface = "pt.anunciosloc.shared.InfraService", 
+           targetNamespace = "http://service.infra.anunciosloc.pt/")
 public class InfraServiceImpl implements InfraService {
     
     private String nome;
