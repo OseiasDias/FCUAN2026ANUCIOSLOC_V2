@@ -2,33 +2,24 @@ package pt.anunciosloc.auth.service;
 
 import jakarta.jws.WebService;
 import pt.anunciosloc.shared.Ticket;
-import java.util.*;
-import java.security.MessageDigest;
-import java.util.concurrent.ConcurrentHashMap;
+import pt.anunciosloc.auth.repository.UtilizadorAuthRepository;
+import pt.anunciosloc.auth.repository.TicketRepository;
+import java.sql.SQLException;
+import java.util.UUID;
 
 @WebService(endpointInterface = "pt.anunciosloc.auth.service.AuthService")
 public class AuthServiceImpl implements AuthService {
     
-    private Map<String, String> utilizadores;
-    private Map<String, Ticket> tickets;
+    private UtilizadorAuthRepository utilizadorRepo;
+    private TicketRepository ticketRepo;
     
     public AuthServiceImpl() {
-        this.utilizadores = new HashMap<>();
-        this.tickets = new ConcurrentHashMap<>();
+        this.utilizadorRepo = new UtilizadorAuthRepository();
+        this.ticketRepo = new TicketRepository();
         
-        System.out.println("=== KERBEROS AUTHENTICATION SERVICE ===");
-        System.out.println("Base de dados vazia. Registar utilizadores primeiro!");
-        System.out.println("========================================");
-    }
-    
-    private String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes());
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
-            return password;
-        }
+        System.out.println("=== KERBEROS AUTHENTICATION SERVICE COM MYSQL ===");
+        System.out.println("Base de dados: anunciosloc");
+        System.out.println("================================================");
     }
     
     private String gerarChaveSessao() {
@@ -37,59 +28,75 @@ public class AuthServiceImpl implements AuthService {
     
     @Override
     public String ping() {
-        return "Kerberos AS ativo! Utilizadores: " + utilizadores.size();
+        return "Kerberos AS ativo com MySQL!";
     }
     
     @Override
     public Ticket solicitarTicket(String email, String password) {
-        System.out.println("📝 Login solicitado para: " + email);
+        System.out.println("Login solicitado para: " + email);
         
-        String hashSenha = hashPassword(password);
-        
-        if (!utilizadores.containsKey(email)) {
-            System.err.println("❌ Utilizador não encontrado: " + email);
-            throw new RuntimeException("Utilizador não registado: " + email);
+        try {
+            if (!utilizadorRepo.verificarCredenciais(email, password)) {
+                System.err.println("Credenciais invalidas para: " + email);
+                throw new RuntimeException("Email ou password incorretos");
+            }
+            
+            String chaveSessao = gerarChaveSessao();
+            String ticketId = ticketRepo.criarTicket(email, chaveSessao, 3600);
+            
+            utilizadorRepo.atualizarUltimoLogin(email);
+            
+            Ticket ticket = new Ticket(email, chaveSessao, 3600);
+            ticket.setTicketId(ticketId);
+            
+            System.out.println("Login bem-sucedido: " + email);
+            return ticket;
+            
+        } catch (SQLException e) {
+            System.err.println("Erro ao solicitar ticket: " + e.getMessage());
+            throw new RuntimeException("Erro na autenticacao: " + e.getMessage());
         }
-        
-        if (!utilizadores.get(email).equals(hashSenha)) {
-            System.err.println("❌ Password incorreta para: " + email);
-            throw new RuntimeException("Password incorreta");
-        }
-        
-        String chaveSessao = gerarChaveSessao();
-        Ticket ticket = new Ticket(email, chaveSessao, 3600);
-        tickets.put(ticket.getTicketId(), ticket);
-        
-        System.out.println("✅ Login bem-sucedido: " + email);
-        return ticket;
     }
     
     @Override
     public boolean validarTicket(String ticketId, String email) {
-        Ticket ticket = tickets.get(ticketId);
-        if (ticket == null) return false;
-        if (!ticket.isValid()) {
-            tickets.remove(ticketId);
+        try {
+            return ticketRepo.validarTicket(ticketId, email);
+        } catch (SQLException e) {
+            System.err.println("Erro ao validar ticket: " + e.getMessage());
             return false;
         }
-        return ticket.getClienteEmail().equals(email);
     }
     
     @Override
     public boolean invalidarTicket(String ticketId) {
-        Ticket removed = tickets.remove(ticketId);
-        return removed != null;
+        try {
+            return ticketRepo.invalidarTicket(ticketId);
+        } catch (SQLException e) {
+            System.err.println("Erro ao invalidar ticket: " + e.getMessage());
+            return false;
+        }
     }
     
-    // Método para registar utilizador (chamado pelo servidor principal)
-  
     @Override
-public String registarUtilizador(String email, String password) {
-    if (!utilizadores.containsKey(email)) {
-        utilizadores.put(email, hashPassword(password));
-        System.out.println("✅ Utilizador registado manualmente no Kerberos: " + email);
-        return "Utilizador registado com sucesso!";
+    public String registarUtilizador(String email, String password) {
+        try {
+            if (utilizadorRepo.utilizadorExiste(email)) {
+                return "Utilizador ja existe!";
+            }
+            
+            boolean registado = utilizadorRepo.registarUtilizador(email, password);
+            
+            if (registado) {
+                System.out.println("Utilizador registado no Kerberos: " + email);
+                return "Utilizador registado com sucesso!";
+            } else {
+                return "Erro ao registar utilizador!";
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Erro ao registar utilizador: " + e.getMessage());
+            return "Erro: " + e.getMessage();
+        }
     }
-    return "Utilizador já existe!";
-}
 }

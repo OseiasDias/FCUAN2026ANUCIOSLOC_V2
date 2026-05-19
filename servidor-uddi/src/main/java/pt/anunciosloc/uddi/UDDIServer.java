@@ -5,21 +5,17 @@ import pt.anunciosloc.uddi.service.UDDIServiceImpl;
 
 public class UDDIServer {
     public static void main(String[] args) {
-        String url = "http://localhost:8090/uddi";
+        String url = "http://0.0.0.0:8090/uddi";
         
         System.out.println("=========================================");
-        System.out.println(" UDDI SERVER - Descoberta de Serviços");
+        System.out.println("UDDI SERVER - Descoberta de Servicos");
         System.out.println("=========================================");
         System.out.println("Publicando UDDI em: " + url);
         
         Endpoint endpoint = Endpoint.publish(url, new UDDIServiceImpl());
         
-        System.out.println(" UDDI Server iniciado com sucesso!");
-        System.out.println(" WSDL: " + url + "?wsdl");
-        System.out.println("=========================================");
-        System.out.println("Comandos para testar:");
-        System.out.println("  - Listar serviços: POST para " + url);
-        System.out.println("  - Ping: GET " + url + "?wsdl");
+        System.out.println("UDDI Server iniciado com sucesso!");
+        System.out.println("WSDL: " + url + "?wsdl");
         System.out.println("=========================================");
         System.out.println("Prima ENTER para parar...");
         
@@ -30,6 +26,6 @@ public class UDDIServer {
         }
         
         endpoint.stop();
-        System.out.println(" UDDI Server parado.");
+        System.out.println("UDDI Server parado.");
     }
 }

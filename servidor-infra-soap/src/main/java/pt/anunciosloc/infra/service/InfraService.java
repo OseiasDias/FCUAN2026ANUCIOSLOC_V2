@@ -43,6 +43,18 @@ public interface InfraService {
                          @WebParam(name = "valor") int valor);
     
     @WebMethod
+    String incrementarUtilizadoresConectados();
+    
+    @WebMethod
+    String decrementarUtilizadoresConectados();
+    
+    @WebMethod
+    String incrementarAnunciosPublicados();
+    
+    @WebMethod
+    String incrementarAnunciosEntregues();
+    
+    @WebMethod
     String registrarNoUDDI();
     
     @WebMethod

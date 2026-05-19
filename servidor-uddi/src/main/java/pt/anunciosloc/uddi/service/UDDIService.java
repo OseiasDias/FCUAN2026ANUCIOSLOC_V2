@@ -5,7 +5,7 @@ import jakarta.jws.WebParam;
 import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.Style;
-import pt.anunciosloc.uddi.model.ServicoRegistado;
+import pt.anunciosloc.shared.ServicoRegistado;
 
 @WebService
 @SOAPBinding(style = Style.RPC)

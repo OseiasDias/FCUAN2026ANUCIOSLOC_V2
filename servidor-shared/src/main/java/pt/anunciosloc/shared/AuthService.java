@@ -15,13 +15,16 @@ public interface AuthService {
     
     @WebMethod
     Ticket solicitarTicket(@WebParam(name = "email") String email,
-                          @WebParam(name = "password") String password,
-                          @WebParam(name = "servicoId") String servicoId);
+                          @WebParam(name = "password") String password);
     
     @WebMethod
     boolean validarTicket(@WebParam(name = "ticketId") String ticketId,
-                         @WebParam(name = "autenticador") String autenticador);
+                         @WebParam(name = "email") String email);
     
     @WebMethod
-    String getChaveSessao(@WebParam(name = "ticketId") String ticketId);
+    boolean invalidarTicket(@WebParam(name = "ticketId") String ticketId);
+    
+    @WebMethod
+    String registarUtilizador(@WebParam(name = "email") String email,
+                              @WebParam(name = "password") String password);
 }

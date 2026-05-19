@@ -8,16 +8,14 @@ public class InfraServer {
         String url = "http://localhost:8081/infra";
         
         System.out.println("=========================================");
-        System.out.println(" INFRAESTRUTURA SOAP - Belas Shopping");
+        System.out.println("INFRAESTRUTURA SOAP");
         System.out.println("=========================================");
-        System.out.println("Publicando serviço em: " + url);
+        System.out.println("Publicando servico em: " + url);
         
         Endpoint endpoint = Endpoint.publish(url, new InfraServiceImpl());
         
-        System.out.println(" Infraestrutura iniciada com sucesso!");
-        System.out.println(" WSDL: " + url + "?wsdl");
-        System.out.println(" Local: Belas Shopping");
-        System.out.println(" Coordenadas: -8.98, 13.18");
+        System.out.println("Infraestrutura iniciada com sucesso!");
+        System.out.println("WSDL: " + url + "?wsdl");
         System.out.println("=========================================");
         System.out.println("Prima ENTER para parar...");
         
@@ -28,6 +26,6 @@ public class InfraServer {
         }
         
         endpoint.stop();
-        System.out.println("🛑 Infraestrutura parada.");
+        System.out.println("Infraestrutura parada.");
     }
 }

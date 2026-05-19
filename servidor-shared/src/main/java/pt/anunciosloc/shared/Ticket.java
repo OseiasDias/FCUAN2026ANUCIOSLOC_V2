@@ -2,39 +2,31 @@ package pt.anunciosloc.shared;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.UUID;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Ticket implements Serializable {
     private static final long serialVersionUID = 1L;
     
     private String ticketId;
     private String clienteEmail;
     private String chaveSessao;
-    private LocalDateTime validade;
-    private boolean ativo;
+    private LocalDateTime emissao;
+    private LocalDateTime expiracao;
     
-    // Construtor vazio (necessário para JAXB)
     public Ticket() {}
     
-    // Construtor com 3 parâmetros (o que estamos a usar)
     public Ticket(String clienteEmail, String chaveSessao, int duracaoSegundos) {
-        this.ticketId = UUID.randomUUID().toString();
+        this.ticketId = java.util.UUID.randomUUID().toString();
         this.clienteEmail = clienteEmail;
         this.chaveSessao = chaveSessao;
-        this.validade = LocalDateTime.now().plusSeconds(duracaoSegundos);
-        this.ativo = true;
+        this.emissao = LocalDateTime.now();
+        this.expiracao = this.emissao.plusSeconds(duracaoSegundos);
     }
     
-    // Construtor com 4 parâmetros (alternativo)
-    public Ticket(String ticketId, String clienteEmail, String chaveSessao, int duracaoSegundos) {
-        this.ticketId = ticketId;
-        this.clienteEmail = clienteEmail;
-        this.chaveSessao = chaveSessao;
-        this.validade = LocalDateTime.now().plusSeconds(duracaoSegundos);
-        this.ativo = true;
-    }
-    
-    // Getters e Setters
     public String getTicketId() { return ticketId; }
     public void setTicketId(String ticketId) { this.ticketId = ticketId; }
     
@@ -44,13 +36,13 @@ public class Ticket implements Serializable {
     public String getChaveSessao() { return chaveSessao; }
     public void setChaveSessao(String chaveSessao) { this.chaveSessao = chaveSessao; }
     
-    public LocalDateTime getValidade() { return validade; }
-    public void setValidade(LocalDateTime validade) { this.validade = validade; }
+    public LocalDateTime getEmissao() { return emissao; }
+    public void setEmissao(LocalDateTime emissao) { this.emissao = emissao; }
     
-    public boolean isAtivo() { return ativo; }
-    public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    public LocalDateTime getExpiracao() { return expiracao; }
+    public void setExpiracao(LocalDateTime expiracao) { this.expiracao = expiracao; }
     
     public boolean isValid() {
-        return ativo && LocalDateTime.now().isBefore(validade);
+        return LocalDateTime.now().isBefore(expiracao);
     }
 }

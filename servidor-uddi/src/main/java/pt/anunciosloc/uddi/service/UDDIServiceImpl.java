@@ -1,24 +1,44 @@
 package pt.anunciosloc.uddi.service;
 
 import jakarta.jws.WebService;
-import pt.anunciosloc.uddi.model.ServicoRegistado;
+import pt.anunciosloc.shared.ServicoRegistado;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @WebService(endpointInterface = "pt.anunciosloc.uddi.service.UDDIService")
 public class UDDIServiceImpl implements UDDIService {
     
-    // Registro de serviços (thread-safe)
     private Map<String, ServicoRegistado> servicos = new ConcurrentHashMap<>();
     
     public UDDIServiceImpl() {
-        // Opcional: adicionar serviço principal como exemplo
-        servicos.put("AnunciosLoc-Principal", new ServicoRegistado(
-            "AnunciosLoc-Principal",
-            "http://localhost:8080/ws/anunciosloc",
+        System.out.println("=== UDDI SERVER INICIADO ===");
+        System.out.println("Registro de servicos vazio. Aguardando registos...");
+        
+        servicos.put("servidor-soap", new ServicoRegistado(
+            "servidor-soap",
+            "http://localhost:8082/ws/anunciosloc",
             "PRINCIPAL",
             "Luanda",
-            -8.8383, 13.2344
+            -8.8383, 
+            13.2344
+        ));
+        
+        servicos.put("servidor-infra", new ServicoRegistado(
+            "servidor-infra",
+            "http://localhost:8081/infra",
+            "INFRAESTRUTURA",
+            "Belas Shopping, Luanda",
+            -8.98, 
+            13.18
+        ));
+        
+        servicos.put("servidor-auth", new ServicoRegistado(
+            "servidor-auth",
+            "http://localhost:8085/auth",
+            "AUTH",
+            "Luanda",
+            -8.8383, 
+            13.2344
         ));
     }
     
@@ -27,13 +47,18 @@ public class UDDIServiceImpl implements UDDIService {
                                   String localizacao, double latitude, double longitude) {
         ServicoRegistado servico = new ServicoRegistado(nome, url, tipo, localizacao, latitude, longitude);
         servicos.put(nome, servico);
-        return "Serviço '" + nome + "' registado com sucesso em " + url;
+        System.out.println("Servico registado: " + nome + " em " + url);
+        return "Servico '" + nome + "' registado com sucesso em " + url;
     }
     
     @Override
     public boolean removerServico(String nome) {
         ServicoRegistado removido = servicos.remove(nome);
-        return removido != null;
+        if (removido != null) {
+            System.out.println("Servico removido: " + nome);
+            return true;
+        }
+        return false;
     }
     
     @Override
@@ -63,12 +88,12 @@ public class UDDIServiceImpl implements UDDIService {
     
     @Override
     public String ping() {
-        return "UDDI Server ativo! Serviços registados: " + servicos.size();
+        return "UDDI Server ativo! Servicos registados: " + servicos.size();
     }
     
     private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
         double dx = lat1 - lat2;
         double dy = lon1 - lon2;
-        return Math.sqrt(dx * dx + dy * dy) * 111; // km
+        return Math.sqrt(dx * dx + dy * dy) * 111;
     }
 }

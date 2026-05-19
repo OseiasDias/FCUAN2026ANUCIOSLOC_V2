@@ -3,36 +3,32 @@ package pt.anunciosloc.server.service;
 import jakarta.jws.WebService;
 import pt.anunciosloc.server.model.*;
 import pt.anunciosloc.server.quorum.QuorumManager;
+import pt.anunciosloc.server.repository.UtilizadorRepository;
+import pt.anunciosloc.server.repository.AnuncioRepository;
+import pt.anunciosloc.server.repository.InfraestruturaRepository;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @WebService(endpointInterface = "pt.anunciosloc.server.service.AnunciosLocService")
 public class AnunciosLocServiceImpl implements AnunciosLocService {
 
-    private Map<String, Utilizador> utilizadores = new HashMap<>();
-    private List<Anuncio> anuncios = new ArrayList<>();
-    private List<Infraestrutura> infraestruturas = new ArrayList<>();
+    private UtilizadorRepository utilizadorRepo;
+    private AnuncioRepository anuncioRepo;
+    private InfraestruturaRepository infraRepo;
     private QuorumManager quorumManager;
 
     public AnunciosLocServiceImpl() {
+        this.utilizadorRepo = new UtilizadorRepository();
+        this.anuncioRepo = new AnuncioRepository();
+        this.infraRepo = new InfraestruturaRepository();
+        
         List<String> urls = Arrays.asList("http://localhost:8081/infra");
         this.quorumManager = new QuorumManager(urls);
 
-        infraestruturas.add(
-                new Infraestrutura(
-                        "Belas Shopping",
-                        -8.98,
-                        13.18,
-                        100,
-                        "http://localhost:8081/infra",
-                        "admin@anunciosloc.com"));
-        Utilizador admin = new Utilizador("admin@anunciosloc.com", "admin123", "Administrador");
-        admin.setSaldo(1000);
-        utilizadores.put("admin@anunciosloc.com", admin);
-
-        System.out.println("=== SERVIDOR INICIADO ===");
-        System.out.println("Admin: admin@anunciosloc.com / admin123");
-        System.out.println("========================");
+        System.out.println("=== SERVIDOR INICIADO COM MYSQL ===");
+        System.out.println("Base de dados: anunciosloc");
+        System.out.println("================================");
     }
 
     private void registarNoKerberos(String email, String password) {
@@ -53,179 +49,182 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
                     .build();
 
             client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
-            System.out.println("✅ Utilizador registado no Kerberos: " + email);
+            System.out.println("Utilizador registado no Kerberos: " + email);
         } catch (Exception e) {
-            System.err.println("⚠️ Erro ao registar no Kerberos: " + e.getMessage());
+            System.err.println("Erro ao registar no Kerberos: " + e.getMessage());
         }
     }
 
     @Override
     public String ping() {
-        return "Servidor AnunciosLoc ativo!";
+        return "Servidor AnunciosLoc ativo com MySQL!";
     }
 
     @Override
     public String ativarUtilizador(String email, String password, String nome) {
-        if (utilizadores.containsKey(email)) {
-            return "Erro: Utilizador já existe: " + email;
+        try {
+            if (utilizadorRepo.existe(email)) {
+                return "Erro: Utilizador ja existe: " + email;
+            }
+
+            if (email == null || email.isEmpty())
+                return "Erro: Email e obrigatorio!";
+            if (password == null || password.length() < 4)
+                return "Erro: Password deve ter pelo menos 4 caracteres!";
+            if (nome == null || nome.isEmpty())
+                return "Erro: Nome e obrigatorio!";
+
+            Utilizador novo = new Utilizador(email, password, nome);
+            novo.setSaldo(10.0);
+            utilizadorRepo.salvar(novo);
+            quorumManager.escreverSaldo(email, 10);
+
+            registarNoKerberos(email, password);
+
+            return "Utilizador registado com sucesso!\nEmail: " + email + "\nNome: " + nome + "\nSaldo: 10 pontos";
+        } catch (SQLException e) {
+            return "Erro ao registar: " + e.getMessage();
         }
-
-        if (email == null || email.isEmpty())
-            return "Erro: Email é obrigatório!";
-        if (password == null || password.length() < 4)
-            return "Erro: Password deve ter pelo menos 4 caracteres!";
-        if (nome == null || nome.isEmpty())
-            return "Erro: Nome é obrigatório!";
-
-        Utilizador novo = new Utilizador(email, password, nome);
-        novo.setSaldo(10);
-        utilizadores.put(email, novo);
-        quorumManager.escreverSaldo(email, 10);
-
-        registarNoKerberos(email, password);
-
-        return "✅ Utilizador registado com sucesso!\nEmail: " + email + "\nNome: " + nome + "\nSaldo: 10 pontos";
     }
 
     @Override
     public int consultarSaldo(String email) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            throw new RuntimeException("Utilizador não encontrado: " + email);
-        return u.getSaldo();
+        try {
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo())
+                throw new RuntimeException("Utilizador nao encontrado: " + email);
+            return (int) u.getSaldo();
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao consultar saldo: " + e.getMessage());
+        }
     }
 
     @Override
     public String atualizarSaldo(String email, int novoSaldo) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            throw new RuntimeException("Utilizador não encontrado: " + email);
-        u.setSaldo(novoSaldo);
-        quorumManager.escreverSaldo(email, novoSaldo);
-        return "Saldo atualizado para " + novoSaldo;
+        try {
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo())
+                return "Utilizador nao encontrado: " + email;
+            
+            utilizadorRepo.atualizarSaldo(email, (double) novoSaldo);
+            quorumManager.escreverSaldo(email, novoSaldo);
+            return "Saldo atualizado para " + novoSaldo;
+        } catch (SQLException e) {
+            return "Erro ao atualizar saldo: " + e.getMessage();
+        }
     }
 
     @Override
     public String eliminarUtilizador(String email) {
-        Utilizador removido = utilizadores.remove(email);
-        if (removido != null) {
-            anuncios.removeIf(a -> a.getAutorEmail().equals(email));
+        try {
+            utilizadorRepo.eliminar(email);
             return "Utilizador " + email + " eliminado!";
+        } catch (SQLException e) {
+            return "Erro ao eliminar: " + e.getMessage();
         }
-        return "Utilizador não encontrado: " + email;
     }
 
     @Override
     public String editarUtilizador(String email, String novoEmail, String novoNome) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            return "Utilizador não encontrado: " + email;
-
-        if (novoEmail != null && !novoEmail.isEmpty() && !novoEmail.equals(email)) {
-            if (utilizadores.containsKey(novoEmail))
-                return "Erro: Email " + novoEmail + " já em uso!";
-            utilizadores.remove(email);
-            u.setEmail(novoEmail);
-            utilizadores.put(novoEmail, u);
-            for (Anuncio a : anuncios)
-                if (a.getAutorEmail().equals(email))
-                    a.setAutorEmail(novoEmail);
-        }
-        if (novoNome != null && !novoNome.isEmpty())
-            u.setNome(novoNome);
-
-        return "Utilizador atualizado!\nEmail: " + u.getEmail() + "\nNome: " + u.getNome();
+        return "Funcionalidade em implementacao com MySQL";
     }
 
     @Override
     public String[] listarUtilizadores() {
-        return utilizadores.values().stream()
-                .filter(Utilizador::isAtivo)
-                .map(u -> u.getEmail() + " | " + u.getNome() + " | Saldo: " + u.getSaldo())
-                .toArray(String[]::new);
+        try {
+            List<Utilizador> utilizadores = utilizadorRepo.listarTodos();
+            return utilizadores.stream()
+                    .filter(u -> u.isAtivo())
+                    .map(u -> u.getEmail() + " | " + u.getNome() + " | Saldo: " + (int)u.getSaldo())
+                    .toArray(String[]::new);
+        } catch (SQLException e) {
+            return new String[]{"Erro ao listar: " + e.getMessage()};
+        }
     }
 
     @Override
     public String alterarPassword(String email, String passwordAntiga, String passwordNova) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            return "Utilizador não encontrado: " + email;
-        if (u.getPassword() != null && !u.getPassword().equals(passwordAntiga))
-            return "Password antiga incorreta!";
-        if (passwordNova == null || passwordNova.length() < 4)
-            return "Nova password deve ter pelo menos 4 caracteres!";
-        u.setPassword(passwordNova);
-        return "Password alterada com sucesso!";
+        return "Funcionalidade em implementacao com MySQL";
     }
 
     @Override
     public String desativarConta(String email) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null)
-            return "Utilizador não encontrado: " + email;
-        if (!u.isAtivo())
-            return "Conta já está desativada!";
-        u.setAtivo(false);
-        return "Conta de " + email + " foi desativada.";
+        try {
+            utilizadorRepo.desativar(email);
+            return "Conta de " + email + " foi desativada.";
+        } catch (SQLException e) {
+            return "Erro ao desativar: " + e.getMessage();
+        }
     }
 
     @Override
     public String reativarConta(String email) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null)
-            return "Utilizador não encontrado: " + email;
-        if (u.isAtivo())
-            return "Conta já está ativa!";
-        u.setAtivo(true);
-        return "Conta de " + email + " foi reativada!";
+        try {
+            utilizadorRepo.reativar(email);
+            return "Conta de " + email + " foi reativada!";
+        } catch (SQLException e) {
+            return "Erro ao reativar: " + e.getMessage();
+        }
     }
 
     @Override
     public Utilizador obterUtilizador(String email) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            throw new RuntimeException("Utilizador não encontrado: " + email);
-        Utilizador copia = new Utilizador(u.getEmail());
-        copia.setNome(u.getNome());
-        copia.setSaldo(u.getSaldo());
-        copia.setDataRegisto(u.getDataRegisto());
-        copia.setUltimoAnuncio(u.getUltimoAnuncio());
-        return copia;
+        try {
+            return utilizadorRepo.buscarPorEmail(email);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao obter utilizador: " + e.getMessage());
+        }
     }
 
     @Override
     public String postarMensagem(String email, String conteudo, String local) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            throw new RuntimeException("Utilizador não encontrado: " + email);
-        Anuncio anuncio = new Anuncio(conteudo, email, local);
-        anuncios.add(anuncio);
-        u.setUltimoAnuncio(java.time.LocalDateTime.now());
-        return "Anúncio publicado! ID: " + anuncio.getId();
+        try {
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo())
+                return "Utilizador nao encontrado: " + email;
+            
+            Anuncio anuncio = new Anuncio(conteudo, email, local);
+            anuncioRepo.salvar(anuncio);
+            utilizadorRepo.atualizarUltimoAnuncio(email, LocalDateTime.now());
+            return "Anuncio publicado! ID: " + anuncio.getId();
+        } catch (SQLException e) {
+            return "Erro ao publicar: " + e.getMessage();
+        }
     }
 
     @Override
     public String[] receberMensagens(String email, String local) {
-        Utilizador u = utilizadores.get(email);
-        if (u == null || !u.isAtivo())
-            throw new RuntimeException("Utilizador não encontrado: " + email);
-        return anuncios.stream()
-                .filter(a -> a.getLocal().equalsIgnoreCase(local))
-                .map(a -> "[" + a.getDataCriacao() + "] " + a.getConteudo())
-                .toArray(String[]::new);
+        try {
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo())
+                return new String[]{"Utilizador nao encontrado: " + email};
+            
+            List<Anuncio> anuncios = anuncioRepo.buscarPorLocal(local);
+            return anuncios.stream()
+                    .map(a -> "[" + a.getDataCriacao() + "] " + a.getConteudo())
+                    .toArray(String[]::new);
+        } catch (SQLException e) {
+            return new String[]{"Erro ao receber mensagens: " + e.getMessage()};
+        }
     }
 
     @Override
     public Infraestrutura[] listarInfraestruturas() {
-        return infraestruturas.toArray(new Infraestrutura[0]);
+        try {
+            List<Infraestrutura> infraList = infraRepo.listarTodas();
+            return infraList.toArray(new Infraestrutura[0]);
+        } catch (SQLException e) {
+            return new Infraestrutura[0];
+        }
     }
 
     @Override
     public Infraestrutura obterInfoInfraestrutura(String nome) {
-        return infraestruturas.stream()
-                .filter(i -> i.getNome().equalsIgnoreCase(nome))
-                .findFirst()
-                .orElse(null);
+        try {
+            return infraRepo.buscarPorNome(nome);
+        } catch (SQLException e) {
+            return null;
+        }
     }
 
     @Override
@@ -233,158 +232,101 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
         return quorumManager.getStatus();
     }
 
-    // Métodos de infraestruturas (completo)
-
     @Override
     public String criarInfraestrutura(String nome, String localizacao, double latitude, double longitude,
             int capacidade, String url, String criadorEmail) {
-
-        if (nome == null || nome.isEmpty())
-            return "Nome obrigatório!";
-        if (criadorEmail == null || criadorEmail.isEmpty())
-            return "Criador obrigatório!";
-
-        boolean existe = infraestruturas.stream()
-                .anyMatch(i -> i.getNome().equalsIgnoreCase(nome));
-
-        if (existe)
-            return "Infraestrutura já existe!";
-
-        Infraestrutura infra = new Infraestrutura(nome, latitude, longitude, capacidade, url, criadorEmail);
-        infra.setLocalizacao(localizacao);
-
-        infraestruturas.add(infra);
-
-        return "Infraestrutura criada com sucesso: " + nome;
+        try {
+            Infraestrutura infra = new Infraestrutura(nome, latitude, longitude, capacidade, url, criadorEmail);
+            infra.setLocalizacao(localizacao);
+            infraRepo.salvar(infra);
+            return "Infraestrutura criada com sucesso: " + nome;
+        } catch (SQLException e) {
+            return "Erro ao criar: " + e.getMessage();
+        }
     }
 
     @Override
     public String editarInfraestrutura(String nome, String novoNome, String localizacao,
-            double latitude, double longitude,
-            int capacidade, String url) {
-
-        Infraestrutura infra = infraestruturas.stream()
-                .filter(i -> i.getNome().equalsIgnoreCase(nome))
-                .findFirst()
-                .orElse(null);
-
-        if (infra == null)
-            return "Infraestrutura não encontrada: " + nome;
-
-        if (novoNome != null && !novoNome.isEmpty())
-            infra.setNome(novoNome);
-        if (localizacao != null)
-            infra.setLocalizacao(localizacao);
-
-        infra.setLatitude(latitude);
-        infra.setLongitude(longitude);
-        infra.setCapacidade(capacidade);
-        if (url != null)
-            infra.setUrl(url);
-
-        return "Infraestrutura atualizada com sucesso!";
+            double latitude, double longitude, int capacidade, String url) {
+        return "Funcionalidade em implementacao";
     }
 
     @Override
     public String eliminarInfraestrutura(String nome) {
-
-        boolean removed = infraestruturas.removeIf(i -> i.getNome().equalsIgnoreCase(nome));
-
-        return removed ? "Infraestrutura eliminada!" : "Não encontrada!";
+        try {
+            infraRepo.eliminar(nome);
+            return "Infraestrutura eliminada!";
+        } catch (SQLException e) {
+            return "Erro ao eliminar: " + e.getMessage();
+        }
     }
 
     @Override
     public String ativarInfraestrutura(String nome) {
-        Infraestrutura i = infraestruturas.stream()
-                .filter(infra -> infra.getNome().equalsIgnoreCase(nome))
-                .findFirst()
-                .orElse(null);
-        if (i == null)
-            return "Não encontrada!";
-        i.setAtivo(true);
-        return "Infraestrutura ativada!";
+        try {
+            infraRepo.ativar(nome);
+            return "Infraestrutura ativada!";
+        } catch (SQLException e) {
+            return "Erro ao ativar: " + e.getMessage();
+        }
     }
 
     @Override
     public String desativarInfraestrutura(String nome) {
-        Infraestrutura i = infraestruturas.stream()
-                .filter(infra -> infra.getNome().equalsIgnoreCase(nome))
-                .findFirst()
-                .orElse(null);
-        if (i == null)
-            return "Não encontrada!";
-        i.setAtivo(false);
-        return "Infraestrutura desativada!";
-    }
-
-    // Metdos auxiliares para infraestruturas
-    private Infraestrutura obterInfra(String nome) {
-        return infraestruturas.stream()
-                .filter(i -> i.getNome().equalsIgnoreCase(nome))
-                .findFirst()
-                .orElse(null);
-    }
-
-    @Override
-    public String incrementarEntregas(String nome) {
-        Infraestrutura i = infraestruturas.stream()
-                .filter(infra -> infra.getNome().equalsIgnoreCase(nome))
-                .findFirst()
-                .orElse(null);
-
-        if (i == null)
-            return "Não encontrada!";
-
-        i.setTotalEntregas(i.getTotalEntregas() + 1);
-        return "OK";
+        try {
+            infraRepo.desativar(nome);
+            return "Infraestrutura desativada!";
+        } catch (SQLException e) {
+            return "Erro ao desativar: " + e.getMessage();
+        }
     }
 
     @Override
     public String incrementarUtilizadores(String nome) {
-        Infraestrutura i = obterInfra(nome);
-        if (i == null)
-            return "Não encontrada!";
-        i.setUtilizadoresConectados(i.getUtilizadoresConectados() + 1);
-        return "OK";
+        return "Funcionalidade em implementacao";
     }
 
     @Override
     public String decrementarUtilizadores(String nome) {
-        Infraestrutura i = obterInfra(nome);
-        if (i == null)
-            return "Não encontrada!";
-        i.setUtilizadoresConectados(Math.max(0, i.getUtilizadoresConectados() - 1));
-        return "OK";
+        return "Funcionalidade em implementacao";
     }
 
     @Override
     public String incrementarAnuncios(String nome) {
-        Infraestrutura i = obterInfra(nome);
-        if (i == null)
-            return "Não encontrada!";
-        i.setTotalAnuncios(i.getTotalAnuncios() + 1);
-        return "OK";
+        return "Funcionalidade em implementacao";
+    }
+
+    @Override
+    public String incrementarEntregas(String nome) {
+        return "Funcionalidade em implementacao";
     }
 
     @Override
     public String[] listarAnuncios() {
-        return anuncios.stream()
-                .map(a -> "[" + a.getDataCriacao() + "] " +
-                        a.getAutorEmail() + ": " +
-                        a.getConteudo() +
-                        " (" + a.getLocal() + ")")
-                .toArray(String[]::new);
+        try {
+            List<Anuncio> anuncios = anuncioRepo.listarTodos();
+            return anuncios.stream()
+                    .map(a -> "[" + a.getDataCriacao() + "] " +
+                            a.getAutorEmail() + ": " +
+                            a.getConteudo() +
+                            " (" + a.getLocal() + ")")
+                    .toArray(String[]::new);
+        } catch (SQLException e) {
+            return new String[]{"Erro ao listar anuncios: " + e.getMessage()};
+        }
     }
-
-  
 
     @Override
     public String[] listarAnunciosPorUtilizador(String email) {
-        return anuncios.stream()
-                .filter(a -> a.getAutorEmail().equalsIgnoreCase(email))
-                .map(a -> "[" + a.getDataCriacao() + "] " +
-                        a.getConteudo() +
-                        " (" + a.getLocal() + ")")
-                .toArray(String[]::new);
+        try {
+            List<Anuncio> anuncios = anuncioRepo.buscarPorAutor(email);
+            return anuncios.stream()
+                    .map(a -> "[" + a.getDataCriacao() + "] " +
+                            a.getConteudo() +
+                            " (" + a.getLocal() + ")")
+                    .toArray(String[]::new);
+        } catch (SQLException e) {
+            return new String[]{"Erro ao listar anuncios: " + e.getMessage()};
+        }
     }
 }

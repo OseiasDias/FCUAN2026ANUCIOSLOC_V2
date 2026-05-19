@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class Constantes {
   // ==================== URLs DOS SERVIDORES ====================
-  static const String ipServidor = '10.192.31.128';
+  static const String ipServidor = '10.157.116.128';
 
   static const String portaApi = '8082';
   static const String portaAuth = '8085';

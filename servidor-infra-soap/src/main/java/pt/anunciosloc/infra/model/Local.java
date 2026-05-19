@@ -10,11 +10,14 @@ import jakarta.xml.bind.annotation.XmlRootElement;
 public class Local implements Serializable {
     private static final long serialVersionUID = 1L;
     
+    private Long id;
     private String nome;
     private String tipo;
     private double latitude;
     private double longitude;
     private double raio;
+    private String wifiSsid;
+    private Long infraestruturaId;
     
     public Local() {}
     
@@ -26,7 +29,9 @@ public class Local implements Serializable {
         this.raio = raio;
     }
     
-    // Getters e Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     
@@ -41,4 +46,10 @@ public class Local implements Serializable {
     
     public double getRaio() { return raio; }
     public void setRaio(double raio) { this.raio = raio; }
+    
+    public String getWifiSsid() { return wifiSsid; }
+    public void setWifiSsid(String wifiSsid) { this.wifiSsid = wifiSsid; }
+    
+    public Long getInfraestruturaId() { return infraestruturaId; }
+    public void setInfraestruturaId(Long infraestruturaId) { this.infraestruturaId = infraestruturaId; }
 }

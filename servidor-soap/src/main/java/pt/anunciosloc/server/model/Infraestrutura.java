@@ -5,6 +5,7 @@ import java.io.Serializable;
 public class Infraestrutura implements Serializable {
     private static final long serialVersionUID = 1L;
     
+    private Long id;
     private String nome;
     private String localizacao;
     private double latitude;
@@ -14,29 +15,33 @@ public class Infraestrutura implements Serializable {
     private int utilizadoresConectados;
     private int totalAnuncios;
     private int totalEntregas;
-    private String criadorEmail;      // ← NOVO CAMPO!
+    private String criadorEmail;
     private boolean ativo;
+    private double premioEntrega;
+    private double custoAnuncio;
     
-    public Infraestrutura() {}
+    public Infraestrutura() {
+        this.ativo = true;
+        this.utilizadoresConectados = 0;
+        this.totalAnuncios = 0;
+        this.totalEntregas = 0;
+        this.premioEntrega = 2.0;
+        this.custoAnuncio = 5.0;
+    }
     
-    // Construtor completo
     public Infraestrutura(String nome, double latitude, double longitude, int capacidade, String url, String criadorEmail) {
+        this();
         this.nome = nome;
-        this.localizacao = null; // ou passado no construtor
         this.latitude = latitude;
         this.longitude = longitude;
         this.capacidade = capacidade;
         this.url = url;
         this.criadorEmail = criadorEmail;
-        this.ativo = true;
-        this.totalAnuncios = 0;
-        this.totalEntregas = 0;
-        this.utilizadoresConectados = 0;
     }
-
     
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     
-    // Getters e Setters
     public String getNome() { return nome; }
     public void setNome(String nome) { this.nome = nome; }
     
@@ -75,4 +80,34 @@ public class Infraestrutura implements Serializable {
     
     public boolean isAtivo() { return ativo; }
     public void setAtivo(boolean ativo) { this.ativo = ativo; }
+    
+    public double getPremioEntrega() { return premioEntrega; }
+    public void setPremioEntrega(double premioEntrega) { this.premioEntrega = premioEntrega; }
+    
+    public double getCustoAnuncio() { return custoAnuncio; }
+    public void setCustoAnuncio(double custoAnuncio) { this.custoAnuncio = custoAnuncio; }
+    
+    public boolean temCapacidade() {
+        return utilizadoresConectados < capacidade;
+    }
+    
+    public void incrementarUtilizadores() {
+        if (temCapacidade()) {
+            this.utilizadoresConectados++;
+        }
+    }
+    
+    public void decrementarUtilizadores() {
+        if (this.utilizadoresConectados > 0) {
+            this.utilizadoresConectados--;
+        }
+    }
+    
+    public void incrementarAnuncios() {
+        this.totalAnuncios++;
+    }
+    
+    public void incrementarEntregas() {
+        this.totalEntregas++;
+    }
 }
