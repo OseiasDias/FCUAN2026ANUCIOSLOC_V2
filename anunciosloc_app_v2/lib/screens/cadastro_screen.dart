@@ -57,36 +57,33 @@ class _CadastroScreenState extends State<CadastroScreen> {
       if (resultado['sucesso'] == true) {
         _mostrarMensagem(Constantes.sucessoCadastro);
 
-        // Tentar fazer login automático
         final loginResultado = await ApiService.login(
           email: _emailController.text.trim(),
           senha: _senhaController.text,
         );
 
-        if (loginResultado['sucesso'] == true) {
+        if (loginResultado['sucesso'] == true && mounted) {
           await Preferencias.salvarUsuario(
             email: _emailController.text.trim(),
             ticketId: loginResultado['ticketId'],
             nome: _nomeController.text.trim(),
           );
 
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          }
-        } else {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
-            );
-          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeScreen()),
+          );
+        } else if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+          );
         }
       } else {
-        _mostrarMensagem(resultado['mensagem'] ?? 'Erro ao cadastrar',
-            isErro: true);
+        _mostrarMensagem(
+          resultado['mensagem'] ?? 'Erro ao cadastrar',
+          isErro: true,
+        );
       }
     }
   }
@@ -101,7 +98,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
-              // Logo
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -115,26 +111,18 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Título
               const Text(
                 'Criar Conta',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
                 'Registe-se para começar',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
-              // Formulário
               Form(
                 key: _formChave,
                 child: Column(
@@ -212,7 +200,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-              // Botão cadastrar
               if (_carregando)
                 const LoadingWidget()
               else
@@ -221,7 +208,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
                   aoClicar: _cadastrar,
                 ),
               const SizedBox(height: 16),
-              // Link para login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

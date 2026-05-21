@@ -7,6 +7,8 @@ import 'receber_anuncios_screen.dart';
 import 'perfil_screen.dart';
 import 'login_screen.dart';
 import 'meus_anuncios_screen.dart';
+import 'locais_screen.dart';
+import 'entrega_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -171,75 +173,92 @@ class _HomeScreenState extends State<HomeScreen> {
                   // GRID DE BOTÕES
                   Expanded(
                     child: GridView.count(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      children: [
-                        _botaoMenu(
-                          icone: Icons.edit,
-                          titulo: 'Publicar',
-                          subtitulo: 'Criar anúncio',
-                          cor: Colors.blue,
-                          aoClicar: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PostarAnuncioScreen(),
-                              ),
-                            ).then((_) => _carregarDados());
-                          },
-                        ),
-                        _botaoMenu(
-                          icone: Icons.download,
-                          titulo: 'Receber',
-                          subtitulo: 'Ver anúncios',
-                          cor: Colors.green,
-                          aoClicar: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ReceberAnunciosScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        _botaoMenu(
-                          icone: Icons.list_alt,
-                          titulo: 'Meus Anúncios',
-                          subtitulo: 'Gerir publicados',
-                          cor: Colors.red,
-                          aoClicar: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const MeusAnunciosScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        _botaoMenu(
-                          icone: Icons.person,
-                          titulo: 'Perfil',
-                          subtitulo: 'Meus dados',
-                          cor: Colors.orange,
-                          aoClicar: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PerfilScreen(),
-                              ),
-                            ).then((_) => _carregarDados());
-                          },
-                        ),
-                        _botaoMenu(
-                          icone: Icons.location_on,
-                          titulo: 'Locais',
-                          subtitulo: 'Infraestruturas',
-                          cor: Colors.purple,
-                          aoClicar: () {},
-                        ),
-                      ],
-                    ),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 16,
+                        mainAxisSpacing: 16,
+                        // No metodo build, atualizar os botoes do GridView:
+                        children: [
+                          _botaoMenu(
+                            icone: Icons.edit,
+                            titulo: 'Publicar',
+                            subtitulo: 'Criar anúncio',
+                            cor: Colors.blue,
+                            aoClicar: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const PostarAnuncioScreen()),
+                              ).then((_) => _carregarDados());
+                            },
+                          ),
+                          _botaoMenu(
+                            icone: Icons.download,
+                            titulo: 'Receber',
+                            subtitulo: 'Ver anúncios',
+                            cor: Colors.green,
+                            aoClicar: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const ReceberAnunciosScreen()),
+                              );
+                            },
+                          ),
+                          _botaoMenu(
+                            icone: Icons.list_alt,
+                            titulo: 'Meus Anúncios',
+                            subtitulo: 'Gerir publicados',
+                            cor: Colors.red,
+                            aoClicar: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const MeusAnunciosScreen()),
+                              );
+                            },
+                          ),
+                          _botaoMenu(
+                            icone: Icons.person,
+                            titulo: 'Perfil',
+                            subtitulo: 'Meus dados',
+                            cor: Colors.orange,
+                            aoClicar: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const PerfilScreen()),
+                              ).then((_) => _carregarDados());
+                            },
+                          ),
+                          _botaoMenu(
+                            icone: Icons.map,
+                            titulo: 'Mapa',
+                            subtitulo: 'Ver locais',
+                            cor: Colors.purple,
+                            aoClicar: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const LocaisScreen()),
+                              );
+                            },
+                          ),
+                          _botaoMenu(
+                            icone: Icons.swap_horiz,
+                            titulo: 'Entrega',
+                            subtitulo: 'Opções avançadas',
+                            cor: Colors.teal,
+                            aoClicar: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const EntregaScreen()),
+                              );
+                            },
+                          ),
+                        ]),
                   ),
                 ],
               ),
