@@ -6,8 +6,25 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.security.MessageDigest;
 
 public class UtilizadorRepository {
+    
+    private String hashPassword(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(password.getBytes());
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            return password;
+        }
+    }
     
     public void salvar(Utilizador utilizador) throws SQLException {
         String sql = "INSERT INTO utilizadores (nome, email, senha, saldo, data_criacao, ultimo_anuncio, sessao_activa) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -17,7 +34,8 @@ public class UtilizadorRepository {
             
             stmt.setString(1, utilizador.getNome());
             stmt.setString(2, utilizador.getEmail());
-            stmt.setString(3, utilizador.getPassword());
+            // Aplicar hash na senha antes de salvar
+            stmt.setString(3, hashPassword(utilizador.getPassword()));
             stmt.setDouble(4, utilizador.getSaldo());
             stmt.setTimestamp(5, Timestamp.valueOf(utilizador.getDataRegisto()));
             stmt.setTimestamp(6, utilizador.getUltimoAnuncio() != null ? 
@@ -195,7 +213,8 @@ public class UtilizadorRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, email);
-            stmt.setString(2, password);
+            // Aplicar hash na senha informada para comparar
+            stmt.setString(2, hashPassword(password));
             ResultSet rs = stmt.executeQuery();
             return rs.next();
         }

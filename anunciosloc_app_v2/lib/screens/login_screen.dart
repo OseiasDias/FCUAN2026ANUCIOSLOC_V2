@@ -162,6 +162,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 BotaoCustomizado(
                   texto: 'ENTRAR',
                   aoClicar: _fazerLogin,
+                  estaCarregando: _carregando,
+                  corFundo: Constantes.corPrincipal, // Adicionar esta linha
                 ),
               const SizedBox(height: 16),
               // Link para cadastro

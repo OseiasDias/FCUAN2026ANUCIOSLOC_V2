@@ -93,6 +93,7 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
                 texto: 'PUBLICAR',
                 aoClicar: _publicar,
                 estaCarregando: _carregando,
+                corFundo: Colors.green, // Adicionar esta linha
               ),
             ],
           ),

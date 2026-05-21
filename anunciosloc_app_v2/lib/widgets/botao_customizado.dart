@@ -5,27 +5,37 @@ class BotaoCustomizado extends StatelessWidget {
   final String texto;
   final VoidCallback aoClicar;
   final bool estaCarregando;
-  final Color? cor;
+  final Color corFundo;
+  final Color corTexto;
+  final double borderRadius;
+  final double altura;
+  final IconData? icone;
 
   const BotaoCustomizado({
     super.key,
     required this.texto,
     required this.aoClicar,
     this.estaCarregando = false,
-    this.cor,
+    this.corFundo = Constantes.corPrincipal,
+    this.corTexto = Colors.white,
+    this.borderRadius = 12,
+    this.altura = 48,
+    this.icone,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
+      height: altura,
       width: double.infinity,
-      height: 50,
       child: ElevatedButton(
         onPressed: estaCarregando ? null : aoClicar,
         style: ElevatedButton.styleFrom(
-          backgroundColor: cor ?? Constantes.corPrincipal,
+          backgroundColor: corFundo,
+          foregroundColor: corTexto,
+          elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
         ),
         child: estaCarregando
@@ -37,10 +47,21 @@ class BotaoCustomizado extends StatelessWidget {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : Text(
-                texto,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icone != null) ...[
+                    Icon(icone, size: 20),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    texto,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
       ),
     );
