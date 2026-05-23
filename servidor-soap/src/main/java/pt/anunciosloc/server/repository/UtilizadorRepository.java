@@ -6,24 +6,13 @@ import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.security.MessageDigest;
+import org.mindrot.jbcrypt.BCrypt;
 
 public class UtilizadorRepository {
     
+    // Apenas BCrypt - sem SHA-256
     private String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes());
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : hash) {
-                String hex = Integer.toHexString(0xff & b);
-                if (hex.length() == 1) hexString.append('0');
-                hexString.append(hex);
-            }
-            return hexString.toString();
-        } catch (Exception e) {
-            return password;
-        }
+        return BCrypt.hashpw(password, BCrypt.gensalt(12));
     }
     
     public void salvar(Utilizador utilizador) throws SQLException {
@@ -34,7 +23,6 @@ public class UtilizadorRepository {
             
             stmt.setString(1, utilizador.getNome());
             stmt.setString(2, utilizador.getEmail());
-            // Aplicar hash na senha antes de salvar
             stmt.setString(3, hashPassword(utilizador.getPassword()));
             stmt.setDouble(4, utilizador.getSaldo());
             stmt.setTimestamp(5, Timestamp.valueOf(utilizador.getDataRegisto()));
@@ -207,16 +195,37 @@ public class UtilizadorRepository {
     }
     
     public boolean verificarCredenciais(String email, String password) throws SQLException {
-        String sql = "SELECT 1 FROM utilizadores WHERE email = ? AND senha = ? AND sessao_activa = true";
-        
+        String sql = "SELECT senha FROM utilizadores WHERE email = ? AND sessao_activa = true";
+
         try (Connection conn = ConnectionFactory.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+
             stmt.setString(1, email);
-            // Aplicar hash na senha informada para comparar
-            stmt.setString(2, hashPassword(password));
             ResultSet rs = stmt.executeQuery();
-            return rs.next();
+
+            if (rs.next()) {
+                String hashBD = rs.getString("senha");
+                
+                // Verificar se e BCrypt (comeca com $2a$)
+                if (hashBD.startsWith("$2a$")) {
+                    return BCrypt.checkpw(password, hashBD);
+                } else {
+                    // Hash antigo (SHA-256 hexadecimal) - converter para BCrypt
+                    System.out.println("Migrando senha do usuario: " + email);
+                    String novaHash = BCrypt.hashpw(password, BCrypt.gensalt(12));
+                    
+                    // Atualizar no banco
+                    String updateSql = "UPDATE utilizadores SET senha = ? WHERE email = ?";
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                        updateStmt.setString(1, novaHash);
+                        updateStmt.setString(2, email);
+                        updateStmt.executeUpdate();
+                    }
+                    
+                    return true;
+                }
+            }
+            return false;
         }
     }
     

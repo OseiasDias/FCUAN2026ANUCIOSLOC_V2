@@ -37,22 +37,34 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _carregando = true);
 
+    print("=== TENTANDO LOGIN ===");
+    print("Email: ${_emailController.text.trim()}");
+    print("Senha: ${_senhaController.text}");
+
     final resultado = await ApiService.login(
       email: _emailController.text.trim(),
       senha: _senhaController.text,
     );
 
+    print("=== RESULTADO LOGIN ===");
+    print(resultado);
+
     if (mounted) {
       setState(() => _carregando = false);
 
       if (resultado['sucesso'] == true) {
+        // Salvar usuario com accessToken e refreshToken
         await Preferencias.salvarUsuario(
           email: resultado['email'],
-          ticketId: resultado['ticketId'],
+          ticketId: resultado['ticketId'] ?? '',
           nome: _emailController.text.trim().split('@').first,
+          accessToken: resultado['accessToken'],
+          refreshToken: resultado['refreshToken'],
         );
 
         _mostrarMensagem(Constantes.sucessoLogin);
+
+        print("=== REDIRECIONANDO PARA HOME ===");
 
         if (mounted) {
           Navigator.pushReplacement(
@@ -148,6 +160,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         if (valor == null || valor.isEmpty) {
                           return 'Digite sua senha';
                         }
+                        if (valor.length < 4) {
+                          return 'Senha deve ter pelo menos 4 caracteres';
+                        }
                         return null;
                       },
                     ),
@@ -163,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   texto: 'ENTRAR',
                   aoClicar: _fazerLogin,
                   estaCarregando: _carregando,
-                  corFundo: Constantes.corPrincipal, // Adicionar esta linha
+                  corFundo: Constantes.corPrincipal,
                 ),
               const SizedBox(height: 16),
               // Link para cadastro

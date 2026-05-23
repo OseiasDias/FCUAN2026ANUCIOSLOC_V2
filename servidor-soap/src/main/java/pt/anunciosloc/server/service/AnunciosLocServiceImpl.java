@@ -329,4 +329,22 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
             return new String[]{"Erro ao listar anuncios: " + e.getMessage()};
         }
     }
+    @Override
+    public String[] listarLocaisCoordenadas() {
+    try {
+        List<Infraestrutura> infraList = infraRepo.listarTodas();
+        List<String> result = new ArrayList<>();
+        for (Infraestrutura infra : infraList) {
+            String data = infra.getNome() + "|" + 
+                          infra.getLatitude() + "|" + 
+                          infra.getLongitude() + "|" + 
+                          infra.getCapacidade();
+            result.add(data);
+        }
+        return result.toArray(new String[0]);
+    } catch (SQLException e) {
+        return new String[0];
+    }
+}
+           
 }

@@ -17,7 +17,7 @@ class _LocaisScreenState extends State<LocaisScreen> {
   LatLng? _centro;
   List<Map<String, dynamic>> _infraestruturas = [];
   bool _carregando = true;
-  String _enderecoAtual = '';
+  String _erro = '';
 
   @override
   void initState() {
@@ -26,37 +26,57 @@ class _LocaisScreenState extends State<LocaisScreen> {
   }
 
   Future<void> _carregarInfraestruturas() async {
-    final temPermissao = await LocalizacaoService.verificarPermissoes();
+    setState(() {
+      _carregando = true;
+      _erro = '';
+    });
 
-    if (temPermissao) {
-      final localizacao = await LocalizacaoService.obterLocalizacaoAtual();
+    try {
+      // Obter localizacao
+      final temPermissao = await LocalizacaoService.verificarPermissoes();
+
+      if (temPermissao) {
+        final localizacao = await LocalizacaoService.obterLocalizacaoAtual();
+        setState(() {
+          _centro = LatLng(localizacao.latitude, localizacao.longitude);
+        });
+        print("Centro definido: $_centro");
+      } else {
+        setState(() {
+          _centro = const LatLng(-8.838333, 13.234444);
+        });
+        print("Sem permissao, usando centro padrao");
+      }
+
+      // Usar o metodo listarLocaisCoordenadas
+      final locais = await ApiService.listarLocaisCoordenadas();
+      print("Locais recebidos: ${locais.length}");
+
       setState(() {
-        _centro = LatLng(localizacao.latitude, localizacao.longitude);
-        _enderecoAtual = localizacao.endereco ?? 'Sua localização';
+        _infraestruturas = locais;
+        _carregando = false;
+        _adicionarMarkers();
       });
-    } else {
+    } catch (e) {
+      print("Erro ao carregar: $e");
       setState(() {
-        _centro = const LatLng(-8.838333, 13.234444);
+        _carregando = false;
+        _erro = e.toString();
       });
     }
-
-    final infra = await ApiService.listarInfraestruturas();
-    setState(() {
-      _infraestruturas = infra;
-      _carregando = false;
-      _adicionarMarkers();
-    });
   }
 
   void _adicionarMarkers() {
     _markers.clear();
+    print("Adicionando markers. Centro: $_centro");
+    print("Infraestruturas: ${_infraestruturas.length}");
 
     if (_centro != null) {
       _markers.add(
         Marker(
           markerId: const MarkerId('minha_localizacao'),
           position: _centro!,
-          infoWindow: InfoWindow(title: _enderecoAtual),
+          infoWindow: const InfoWindow(title: 'Minha Localização'),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         ),
       );
@@ -65,17 +85,33 @@ class _LocaisScreenState extends State<LocaisScreen> {
     for (var infra in _infraestruturas) {
       final lat = infra['latitude'] as double;
       final lng = infra['longitude'] as double;
+      final nome = infra['nome'] as String;
+      final capacidade = infra['capacidade'] as int;
+
+      print("Adicionando marker: $nome em ($lat, $lng)");
 
       _markers.add(
         Marker(
-          markerId: MarkerId(infra['nome']),
+          markerId: MarkerId(nome),
           position: LatLng(lat, lng),
           infoWindow: InfoWindow(
-            title: infra['nome'],
-            snippet: 'Capacidade: ${infra['capacidade']} utilizadores',
+            title: nome,
+            snippet: 'Capacidade: $capacidade utilizadores',
           ),
           icon:
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        ),
+      );
+    }
+
+    // Forcar atualizacao do mapa
+    if (_mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: _centro ?? const LatLng(-8.838333, 13.234444),
+            zoom: Constantes.zoomPadrao,
+          ),
         ),
       );
     }
@@ -99,6 +135,50 @@ class _LocaisScreenState extends State<LocaisScreen> {
       );
     }
 
+    if (_erro.isNotEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Infraestruturas Próximas'),
+          backgroundColor: Constantes.corPrincipal,
+          foregroundColor: Colors.white,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Erro ao carregar: $_erro'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _carregarInfraestruturas,
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_centro == null) {
+      return const Scaffold(
+        body: Center(child: Text('Não foi possível obter localização')),
+      );
+    }
+
+    if (_infraestruturas.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Infraestruturas Próximas'),
+          backgroundColor: Constantes.corPrincipal,
+          foregroundColor: Colors.white,
+        ),
+        body: const Center(
+          child: Text('Nenhuma infraestrutura encontrada'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Infraestruturas Próximas'),
@@ -109,7 +189,7 @@ class _LocaisScreenState extends State<LocaisScreen> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: _centro ?? const LatLng(-8.838333, 13.234444),
+              target: _centro!,
               zoom: Constantes.zoomPadrao,
             ),
             markers: _markers,

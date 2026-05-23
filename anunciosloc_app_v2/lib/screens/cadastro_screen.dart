@@ -61,30 +61,25 @@ class _CadastroScreenState extends State<CadastroScreen> {
       );
 
       if (mounted) {
-        print("=== RESULTADO CADASTRO ===");
-        print(resultado);
-
         if (resultado['sucesso'] == true) {
           _mostrarMensagem(Constantes.sucessoCadastro);
 
-          print("=== TENTANDO LOGIN AUTOMATICO ===");
-
+          // Login automatico com o novo metodo
           final loginResultado = await ApiService.login(
             email: _emailController.text.trim(),
             senha: _senhaController.text,
           );
 
-          print("=== RESULTADO LOGIN ===");
-          print(loginResultado);
+          print("Login resultado: $loginResultado");
 
           if (loginResultado['sucesso'] == true && mounted) {
             await Preferencias.salvarUsuario(
               email: _emailController.text.trim(),
-              ticketId: loginResultado['ticketId'],
+              ticketId: loginResultado['ticketId'] ?? '',
               nome: _nomeController.text.trim(),
+              accessToken: loginResultado['accessToken'],
+              refreshToken: loginResultado['refreshToken'],
             );
-
-            print("=== REDIRECIONANDO PARA HOME ===");
 
             if (mounted) {
               Navigator.pushReplacement(
@@ -93,7 +88,6 @@ class _CadastroScreenState extends State<CadastroScreen> {
               );
             }
           } else if (mounted) {
-            print("=== LOGIN FALHOU, REDIRECIONANDO PARA LOGIN ===");
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const LoginScreen()),
