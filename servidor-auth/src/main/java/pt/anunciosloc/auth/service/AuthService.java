@@ -5,7 +5,7 @@ import jakarta.jws.WebParam;
 import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.Style;
-import pt.anunciosloc.shared.Ticket;
+import pt.anunciosloc.auth.model.LoginResponse;
 
 @WebService
 @SOAPBinding(style = Style.RPC)
@@ -15,17 +15,16 @@ public interface AuthService {
     String ping();
     
     @WebMethod
-    Ticket solicitarTicket(@WebParam(name = "email") String email,
-                          @WebParam(name = "password") String password);
+    LoginResponse login(@WebParam(name = "email") String email,
+                        @WebParam(name = "password") String password);
     
     @WebMethod
-    boolean validarTicket(@WebParam(name = "ticketId") String ticketId,
-                         @WebParam(name = "email") String email);
+    LoginResponse refreshToken(@WebParam(name = "refreshToken") String refreshToken);
     
     @WebMethod
-    boolean invalidarTicket(@WebParam(name = "ticketId") String ticketId);
-
+    boolean validarToken(@WebParam(name = "token") String token);
+    
     @WebMethod
-String registarUtilizador(@WebParam(name = "email") String email,
-                          @WebParam(name = "password") String password);
+    String registarUtilizador(@WebParam(name = "email") String email,
+                              @WebParam(name = "password") String password);
 }

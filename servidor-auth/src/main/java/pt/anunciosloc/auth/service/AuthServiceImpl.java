@@ -1,11 +1,11 @@
 package pt.anunciosloc.auth.service;
 
 import jakarta.jws.WebService;
-import pt.anunciosloc.shared.Ticket;
+import pt.anunciosloc.auth.model.LoginResponse;
 import pt.anunciosloc.auth.repository.UtilizadorAuthRepository;
 import pt.anunciosloc.auth.repository.TicketRepository;
+import pt.anunciosloc.auth.security.JwtUtil;
 import java.sql.SQLException;
-import java.util.UUID;
 
 @WebService(endpointInterface = "pt.anunciosloc.auth.service.AuthService")
 public class AuthServiceImpl implements AuthService {
@@ -17,65 +17,67 @@ public class AuthServiceImpl implements AuthService {
         this.utilizadorRepo = new UtilizadorAuthRepository();
         this.ticketRepo = new TicketRepository();
         
-        System.out.println("=== KERBEROS AUTHENTICATION SERVICE COM MYSQL ===");
+        System.out.println("=== AUTH SERVICE COM JWT + BCrypt ===");
         System.out.println("Base de dados: anunciosloc");
-        System.out.println("================================================");
-    }
-    
-    private String gerarChaveSessao() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 32);
+        System.out.println("======================================");
     }
     
     @Override
     public String ping() {
-        return "Kerberos AS ativo com MySQL!";
+        return "Auth Service ativo com JWT + BCrypt!";
     }
     
     @Override
-    public Ticket solicitarTicket(String email, String password) {
+    public LoginResponse login(String email, String password) {
         System.out.println("Login solicitado para: " + email);
         
         try {
             if (!utilizadorRepo.verificarCredenciais(email, password)) {
                 System.err.println("Credenciais invalidas para: " + email);
-                throw new RuntimeException("Email ou password incorretos");
+                return null;
             }
             
-            String chaveSessao = gerarChaveSessao();
-            String ticketId = ticketRepo.criarTicket(email, chaveSessao, 3600);
+            int userId = utilizadorRepo.getUserIdByEmail(email);
+            double saldo = utilizadorRepo.getSaldoByEmail(email);
+            
+            String accessToken = JwtUtil.generateToken(email, userId);
+            String refreshToken = ticketRepo.criarRefreshToken(userId);
             
             utilizadorRepo.atualizarUltimoLogin(email);
             
-            Ticket ticket = new Ticket(email, chaveSessao, 3600);
-            ticket.setTicketId(ticketId);
-            
             System.out.println("Login bem-sucedido: " + email);
-            return ticket;
+            return new LoginResponse(accessToken, refreshToken, email, saldo);
             
         } catch (SQLException e) {
-            System.err.println("Erro ao solicitar ticket: " + e.getMessage());
-            throw new RuntimeException("Erro na autenticacao: " + e.getMessage());
+            System.err.println("Erro ao fazer login: " + e.getMessage());
+            return null;
         }
     }
     
     @Override
-    public boolean validarTicket(String ticketId, String email) {
+    public LoginResponse refreshToken(String refreshToken) {
+        System.out.println("Refresh token solicitado");
+        
         try {
-            return ticketRepo.validarTicket(ticketId, email);
+            if (!ticketRepo.validarRefreshToken(refreshToken)) {
+                System.err.println("Refresh token invalido ou expirado");
+                return null;
+            }
+            
+            ticketRepo.marcarRefreshTokenUsado(refreshToken);
+            
+            System.out.println("Refresh token valido");
+            return null;
+            
         } catch (SQLException e) {
-            System.err.println("Erro ao validar ticket: " + e.getMessage());
-            return false;
+            System.err.println("Erro ao processar refresh: " + e.getMessage());
+            return null;
         }
     }
     
     @Override
-    public boolean invalidarTicket(String ticketId) {
-        try {
-            return ticketRepo.invalidarTicket(ticketId);
-        } catch (SQLException e) {
-            System.err.println("Erro ao invalidar ticket: " + e.getMessage());
-            return false;
-        }
+    public boolean validarToken(String token) {
+        return JwtUtil.validateToken(token);
     }
     
     @Override
@@ -88,14 +90,14 @@ public class AuthServiceImpl implements AuthService {
             boolean registado = utilizadorRepo.registarUtilizador(email, password);
             
             if (registado) {
-                System.out.println("Utilizador registado no Kerberos: " + email);
+                System.out.println("Utilizador registado: " + email);
                 return "Utilizador registado com sucesso!";
             } else {
                 return "Erro ao registar utilizador!";
             }
             
         } catch (SQLException e) {
-            System.err.println("Erro ao registar utilizador: " + e.getMessage());
+            System.err.println("Erro ao registar: " + e.getMessage());
             return "Erro: " + e.getMessage();
         }
     }

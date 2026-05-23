@@ -1,6 +1,9 @@
-C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\AuthServer.java
+C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\security\PasswordUtil.java
 C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\config\ConnectionFactory.java
+C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\service\AuthService.java
+C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\security\JwtUtil.java
+C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\service\AuthServiceImpl.java
+C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\model\LoginResponse.java
 C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\repository\TicketRepository.java
 C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\repository\UtilizadorAuthRepository.java
-C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\service\AuthService.java
-C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\service\AuthServiceImpl.java
+C:\Android\ANUNCIOSLOC\servidor-auth\src\main\java\pt\anunciosloc\auth\AuthServer.java

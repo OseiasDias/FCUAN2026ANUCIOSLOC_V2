@@ -1,24 +1,13 @@
 package pt.anunciosloc.auth.repository;
 
 import pt.anunciosloc.auth.config.ConnectionFactory;
+import pt.anunciosloc.auth.security.PasswordUtil;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.security.MessageDigest;
-import java.util.Base64;
 
 public class UtilizadorAuthRepository {
-    
-    private String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes());
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
-            return password;
-        }
-    }
     
     public boolean registarUtilizador(String email, String password) throws SQLException {
         String sql = "INSERT INTO utilizadores (nome, email, senha, saldo, data_criacao, sessao_activa) VALUES (?, ?, ?, 10.00, NOW(), true)";
@@ -29,10 +18,9 @@ public class UtilizadorAuthRepository {
             String nome = email.substring(0, email.indexOf('@'));
             stmt.setString(1, nome);
             stmt.setString(2, email);
-            stmt.setString(3, hashPassword(password));
+            stmt.setString(3, PasswordUtil.hash(password));
             
-            int rows = stmt.executeUpdate();
-            return rows > 0;
+            return stmt.executeUpdate() > 0;
         }
     }
     
@@ -46,11 +34,42 @@ public class UtilizadorAuthRepository {
             ResultSet rs = stmt.executeQuery();
             
             if (rs.next()) {
-                String hashArmazenado = rs.getString("senha");
-                String hashInformado = hashPassword(password);
-                return hashArmazenado.equals(hashInformado);
+                String hash = rs.getString("senha");
+                return PasswordUtil.verify(password, hash);
             }
             return false;
+        }
+    }
+    
+    public int getUserIdByEmail(String email) throws SQLException {
+        String sql = "SELECT id FROM utilizadores WHERE email = ?";
+        
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+            return -1;
+        }
+    }
+    
+    public double getSaldoByEmail(String email) throws SQLException {
+        String sql = "SELECT saldo FROM utilizadores WHERE email = ?";
+        
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                return rs.getDouble("saldo");
+            }
+            return 0;
         }
     }
     
