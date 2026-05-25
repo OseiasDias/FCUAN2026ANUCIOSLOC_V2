@@ -4,9 +4,11 @@ import jakarta.jws.WebService;
 import pt.anunciosloc.server.model.*;
 import pt.anunciosloc.server.quorum.QuorumManager;
 import pt.anunciosloc.server.repository.UtilizadorRepository;
+import pt.anunciosloc.shared.Restricao;
 import pt.anunciosloc.server.repository.AnuncioRepository;
 import pt.anunciosloc.server.repository.InfraestruturaRepository;
 import pt.anunciosloc.server.repository.PerfilUtilizadorRepository;
+import pt.anunciosloc.server.repository.RestricaoRepository;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -185,9 +187,36 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
             if (u == null || !u.isAtivo())
                 return "Utilizador nao encontrado: " + email;
 
+            // Verificar saldo
+            if (u.getSaldo() < 5.0) {
+                return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
+            }
+
+            // Verificar tempo desde o ultimo anuncio
+            if (!u.podePublicarAnuncio()) {
+                return "Aguarde 5 minutos para publicar outro anuncio.";
+            }
+
+            // Debitar saldo
+            boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
+            if (!debitado) {
+                return "Erro ao debitar saldo.";
+            }
+
+            // Criar e salvar anuncio
             Anuncio anuncio = new Anuncio(conteudo, email, local);
             anuncioRepo.salvar(anuncio);
+
+            // Atualizar ultimo anuncio
             utilizadorRepo.atualizarUltimoAnuncio(email, LocalDateTime.now());
+
+            // Atualizar estatisticas
+            utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1,
+                    u.getTotalVisualizacoesRecebidas());
+
+            // Atualizar quorum
+            quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
+
             return "Anuncio publicado! ID: " + anuncio.getId();
         } catch (SQLException e) {
             return "Erro ao publicar: " + e.getMessage();
@@ -414,5 +443,31 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
             return "Erro ao remover preferencia: " + e.getMessage();
         }
     }
+  @Override
+public String adicionarRestricao(String anuncioId, String tipo, String chave, String valor) {
+    try {
+        Long id = Long.parseLong(anuncioId);
+        Restricao restricao = new Restricao(id, tipo, chave, valor);
+        RestricaoRepository repo = new RestricaoRepository();
+        repo.salvarRestricao(restricao);
+        return "Restricao adicionada com sucesso";
+    } catch (SQLException e) {
+        return "Erro ao adicionar restricao: " + e.getMessage();
+    }
+}
 
+@Override
+public String[] listarRestricoes(String anuncioId) {
+    try {
+        Long id = Long.parseLong(anuncioId);
+        RestricaoRepository repo = new RestricaoRepository();
+        List<Restricao> restricoes = repo.listarPorAnuncio(id);
+        
+        return restricoes.stream()
+            .map(r -> r.getTipo() + "|" + r.getChave() + "|" + r.getValor())
+            .toArray(String[]::new);
+    } catch (SQLException e) {
+        return new String[0];
+    }
+}
 }

@@ -2,10 +2,13 @@ package pt.anunciosloc.server.repository;
 
 import pt.anunciosloc.server.config.ConnectionFactory;
 import pt.anunciosloc.server.model.Anuncio;
+import pt.anunciosloc.shared.Restricao;
+
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class AnuncioRepository {
     
@@ -66,43 +69,41 @@ public class AnuncioRepository {
         }
     }
     
-    public List<Anuncio> buscarPorLocal(String localNome) throws SQLException {
-        String sql = "SELECT a.*, u.email as autor_email FROM anuncios a " +
-                     "JOIN utilizadores u ON a.utilizador_id = u.id " +
-                     "JOIN locais l ON a.local_id = l.id " +
-                     "WHERE l.nome = ? AND a.activo = true AND a.data_expiracao > NOW() " +
-                     "ORDER BY a.data_criacao DESC";
-        
-        List<Anuncio> lista = new ArrayList<>();
-        
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, localNome);
-            ResultSet rs = stmt.executeQuery();
-            
-            while (rs.next()) {
-                Anuncio a = new Anuncio();
-                a.setId(rs.getString("id"));
-                a.setTitulo(rs.getString("titulo"));
-                a.setDescricao(rs.getString("descricao"));
-                a.setAutorEmail(rs.getString("autor_email"));
-                a.setLocal(localNome);
-                a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
-                a.setActivo(rs.getBoolean("activo"));
-                
-                Timestamp ts = rs.getTimestamp("data_criacao");
-                if (ts != null) a.setDataCriacao(ts.toLocalDateTime());
-                
-                ts = rs.getTimestamp("data_expiracao");
-                if (ts != null) a.setDataExpiracao(ts.toLocalDateTime());
-                
-                lista.add(a);
-            }
-        }
-        return lista;
-    }
+public List<Anuncio> buscarPorLocal(String localNome) throws SQLException {
+    String sql = "SELECT a.*, u.email as autor_email FROM anuncios a " +
+                 "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                 "JOIN locais l ON a.local_id = l.id " +
+                 "WHERE l.nome = ? AND a.activo = true AND a.data_expiracao > NOW() " +
+                 "ORDER BY a.data_criacao DESC";
     
+    List<Anuncio> lista = new ArrayList<>();
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        
+        stmt.setString(1, localNome);
+        ResultSet rs = stmt.executeQuery();
+        
+        while (rs.next()) {
+            Anuncio a = new Anuncio();
+            a.setId(rs.getString("id"));
+            a.setConteudo(rs.getString("descricao"));
+            a.setAutorEmail(rs.getString("autor_email"));
+            a.setLocal(localNome);
+            a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
+            a.setActivo(rs.getBoolean("activo"));
+            
+            Timestamp ts = rs.getTimestamp("data_criacao");
+            if (ts != null) a.setDataCriacao(ts.toLocalDateTime());
+            
+            ts = rs.getTimestamp("data_expiracao");
+            if (ts != null) a.setDataExpiracao(ts.toLocalDateTime());
+            
+            lista.add(a);
+        }
+    }
+    return lista;
+}
     public List<Anuncio> buscarPorAutor(String email) throws SQLException {
         String sql = "SELECT a.*, l.nome as local_nome FROM anuncios a " +
                      "JOIN utilizadores u ON a.utilizador_id = u.id " +
@@ -374,4 +375,84 @@ public class AnuncioRepository {
             stmt.executeUpdate();
         }
     }
+
+    public List<Anuncio> buscarAnunciosVisiveisPorLocal(String localNome, Map<String, String> perfilUtilizador) throws SQLException {
+    String sql = "SELECT a.*, u.email as autor_email FROM anuncios a " +
+                 "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                 "JOIN locais l ON a.local_id = l.id " +
+                 "WHERE l.nome = ? AND a.activo = true AND a.data_expiracao > NOW() " +
+                 "ORDER BY a.data_criacao DESC";
+    
+    List<Anuncio> todosAnuncios = new ArrayList<>();
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        
+        stmt.setString(1, localNome);
+        ResultSet rs = stmt.executeQuery();
+        
+        while (rs.next()) {
+            Anuncio a = new Anuncio();
+            a.setId(rs.getString("id"));
+            a.setTitulo(rs.getString("titulo"));
+            a.setDescricao(rs.getString("descricao"));
+            a.setAutorEmail(rs.getString("autor_email"));
+            a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
+            a.setActivo(rs.getBoolean("activo"));
+            
+            Timestamp ts = rs.getTimestamp("data_criacao");
+            if (ts != null) a.setDataCriacao(ts.toLocalDateTime());
+            
+            todosAnuncios.add(a);
+        }
+    }
+    
+    // Filtrar por restricoes
+    RestricaoRepository restricaoRepo = new RestricaoRepository();
+    List<Anuncio> visiveis = new ArrayList<>();
+    
+    for (Anuncio anuncio : todosAnuncios) {
+        if (isAnuncioVisivel(anuncio, perfilUtilizador, restricaoRepo)) {
+            visiveis.add(anuncio);
+        }
+    }
+    
+    return visiveis;
+}
+
+private boolean isAnuncioVisivel(Anuncio anuncio, Map<String, String> perfil, RestricaoRepository restricaoRepo) throws SQLException {
+    // Buscar ID do anuncio no banco
+    String sql = "SELECT id FROM anuncios WHERE id = ?";
+    Long anuncioId = null;
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setString(1, anuncio.getId());
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            anuncioId = rs.getLong(1);
+        }
+    }
+    
+    if (anuncioId == null) return true;
+    
+    List<Restricao> restricoes = restricaoRepo.listarPorAnuncio(anuncioId);
+    
+    for (Restricao r : restricoes) {
+        String valorPerfil = perfil.getOrDefault(r.getChave(), "");
+        
+        if (r.getTipo().equals("WHITELIST")) {
+            // WHITELIST: so permite se o perfil tiver a chave=valor
+            if (!valorPerfil.equals(r.getValor())) {
+                return false;
+            }
+        } else if (r.getTipo().equals("BLACKLIST")) {
+            // BLACKLIST: bloqueia se o perfil tiver a chave=valor
+            if (valorPerfil.equals(r.getValor())) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
 }

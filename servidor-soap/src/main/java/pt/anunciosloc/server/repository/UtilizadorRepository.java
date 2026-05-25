@@ -98,20 +98,21 @@ public class UtilizadorRepository {
         return lista;
     }
     
-    public boolean debitarSaldo(String email, double valor) throws SQLException {
-        String sql = "UPDATE utilizadores SET saldo = saldo - ? WHERE email = ? AND saldo >= ?";
+   public boolean debitarSaldo(String email, double valor) throws SQLException {
+    String sql = "UPDATE utilizadores SET saldo = saldo - ? WHERE email = ? AND saldo >= ?";
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
         
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setDouble(1, valor);
-            stmt.setString(2, email);
-            stmt.setDouble(3, valor);
-            
-            int atualizados = stmt.executeUpdate();
-            return atualizados > 0;
-        }
+        stmt.setDouble(1, valor);
+        stmt.setString(2, email);
+        stmt.setDouble(3, valor);
+        
+        int atualizados = stmt.executeUpdate();
+        System.out.println("Debito saldo: " + email + " - " + valor + " - Atualizados: " + atualizados);
+        return atualizados > 0;
     }
+}
     
     public void creditarSaldo(String email, double valor) throws SQLException {
         String sql = "UPDATE utilizadores SET saldo = saldo + ? WHERE email = ?";

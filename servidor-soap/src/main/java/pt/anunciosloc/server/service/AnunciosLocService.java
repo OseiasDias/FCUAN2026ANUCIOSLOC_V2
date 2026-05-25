@@ -140,4 +140,13 @@ public interface AnunciosLocService {
         String removerPreferencia(@WebParam(name = "email") String email,
                         @WebParam(name = "chave") String chave);
 
+        @WebMethod
+        String adicionarRestricao(@WebParam(name = "anuncioId") String anuncioId,
+                        @WebParam(name = "tipo") String tipo,
+                        @WebParam(name = "chave") String chave,
+                        @WebParam(name = "valor") String valor);
+
+        @WebMethod
+        String[] listarRestricoes(@WebParam(name = "anuncioId") String anuncioId);
+
 }

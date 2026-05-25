@@ -612,4 +612,54 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<String> obterUltimoAnuncioId(String email) async {
+    try {
+      final body = '<email>$email</email>';
+      final envelope = _buildEnvelope('listarAnunciosPorUtilizador', body);
+
+      final response = await http.post(
+        Uri.parse(Constantes.urlApi),
+        headers: {'Content-Type': 'text/xml'},
+        body: envelope,
+      );
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final items = doc.findAllElements('item');
+        if (items.isNotEmpty) {
+          final primeiroItem = items.first.innerText;
+          final regex = RegExp(r'ID:\s*([a-f0-9-]+)', caseSensitive: false);
+          final match = regex.firstMatch(primeiroItem);
+          if (match != null) {
+            return match.group(1)!;
+          }
+        }
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  static Future<bool> adicionarRestricao({
+    required String anuncioId,
+    required String tipo,
+    required String chave,
+    required String valor,
+  }) async {
+    try {
+      final body = '''
+      <anuncioId>$anuncioId</anuncioId>
+      <tipo>$tipo</tipo>
+      <chave>$chave</chave>
+      <valor>$valor</valor>
+    ''';
+      final envelope = _buildEnvelope('adicionarRestricao', body);
+      final result = await _postRequest(Constantes.urlApi, envelope);
+      return result['sucesso'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
 }
