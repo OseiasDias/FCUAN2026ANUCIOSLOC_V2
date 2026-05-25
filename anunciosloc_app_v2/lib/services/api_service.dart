@@ -662,4 +662,41 @@ class ApiService {
       return false;
     }
   }
+
+  static Future<bool> criarLocal({
+    required String nome,
+    required String tipo,
+    required double latitude,
+    required double longitude,
+    required double raio,
+    required String wifiSsid,
+    required String criadorEmail,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:criarLocal>
+      <nome>$nome</nome>
+      <tipo>$tipo</tipo>
+      <latitude>$latitude</latitude>
+      <longitude>$longitude</longitude>
+      <raio>$raio</raio>
+      <wifiSsid>$wifiSsid</wifiSsid>
+      <criadorEmail>$criadorEmail</criadorEmail>
+    </ns:criarLocal>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http.post(
+        Uri.parse(Constantes.urlApi),
+        headers: {'Content-Type': 'text/xml'},
+        body: envelope,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
 }
