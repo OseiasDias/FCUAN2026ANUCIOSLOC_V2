@@ -109,7 +109,7 @@
                 <executions>
                     <execution>
                         <id>copy-dependencies</id>
-                        <phase>prepare-package</phase>
+                        <phase>package</phase> <!-- Mudar de prepare-package para package -->
                         <goals>
                             <goal>copy-dependencies</goal>
                         </goals>

@@ -2,6 +2,7 @@ import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart';
 import '../utils/constantes.dart';
 import '../models/anuncio_model.dart';
+import '../models/perfil_item.dart';
 
 class ApiService {
   static const String _soapAction = '';
@@ -425,8 +426,8 @@ class ApiService {
   }
 
   static Future<List<Map<String, dynamic>>> listarLocaisCoordenadas() async {
-  try {
-    final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespace}">
   <soap:Body>
@@ -434,55 +435,181 @@ class ApiService {
   </soap:Body>
 </soap:Envelope>''';
 
-    print("=== LISTAR LOCAIS COORDENADAS ===");
-    print("URL: ${Constantes.urlApi}");
+      print("=== LISTAR LOCAIS COORDENADAS ===");
+      print("URL: ${Constantes.urlApi}");
 
-    final response = await http.post(
-      Uri.parse(Constantes.urlApi),
-      headers: {
-        'Content-Type': 'text/xml; charset=utf-8',
-        'SOAPAction': '',
-      },
-      body: envelope,
-    ).timeout(const Duration(seconds: Constantes.tempoEspera));
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+              'SOAPAction': '',
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
 
-    print("Status: ${response.statusCode}");
-    print("Response: ${response.body}");
+      print("Status: ${response.statusCode}");
+      print("Response: ${response.body}");
 
-    if (response.statusCode == 200) {
-      final doc = XmlDocument.parse(response.body);
-      final items = doc.findAllElements('return');
-      
-      List<Map<String, dynamic>> locais = [];
-      
-      for (var item in items) {
-        final texto = item.innerText;
-        print("Texto do local: $texto");
-        
-        // Formato: "Nome|-8.838333|13.234444|100"
-        final partes = texto.split('|');
-        if (partes.length >= 4) {
-          locais.add({
-            'nome': partes[0],
-            'latitude': double.tryParse(partes[1]) ?? 0,
-            'longitude': double.tryParse(partes[2]) ?? 0,
-            'capacidade': int.tryParse(partes[3]) ?? 0,
-          });
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final items = doc.findAllElements('return');
+
+        List<Map<String, dynamic>> locais = [];
+
+        for (var item in items) {
+          final texto = item.innerText;
+          print("Texto do local: $texto");
+
+          // Formato: "Nome|-8.838333|13.234444|100"
+          final partes = texto.split('|');
+          if (partes.length >= 4) {
+            locais.add({
+              'nome': partes[0],
+              'latitude': double.tryParse(partes[1]) ?? 0,
+              'longitude': double.tryParse(partes[2]) ?? 0,
+              'capacidade': int.tryParse(partes[3]) ?? 0,
+            });
+          }
         }
+
+        print("Locais encontrados: ${locais.length}");
+        for (var local in locais) {
+          print(
+              " - ${local['nome']}: (${local['latitude']}, ${local['longitude']})");
+        }
+
+        return locais;
       }
-      
-      print("Locais encontrados: ${locais.length}");
-      for (var local in locais) {
-        print(" - ${local['nome']}: (${local['latitude']}, ${local['longitude']})");
-      }
-      
-      return locais;
+
+      return [];
+    } catch (e) {
+      print("Erro ao listar locais coordenadas: $e");
+      return [];
     }
-    
-    return [];
-  } catch (e) {
-    print("Erro ao listar locais coordenadas: $e");
-    return [];
   }
-}
+
+  static Future<bool> criarInfraestrutura({
+    required String nome,
+    required double latitude,
+    required double longitude,
+    required int capacidade,
+    required String criadorEmail,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:criarInfraestrutura>
+      <nome>$nome</nome>
+      <localizacao>$nome</localizacao>
+      <latitude>$latitude</latitude>
+      <longitude>$longitude</longitude>
+      <capacidade>$capacidade</capacidade>
+      <url>http://localhost:8081/infra</url>
+      <criadorEmail>$criadorEmail</criadorEmail>
+    </ns:criarInfraestrutura>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+              'SOAPAction': '',
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      print("Criar infra status: ${response.statusCode}");
+      print("Criar infra response: ${response.body}");
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Erro ao criar infraestrutura: $e");
+      return false;
+    }
+  }
+
+  static Future<bool> salvarPreferencia(
+      String email, String chave, String valor) async {
+    try {
+      final body = '''
+      <email>$email</email>
+      <chave>$chave</chave>
+      <valor>$valor</valor>
+    ''';
+      final envelope = _buildEnvelope('salvarPreferencia', body);
+      final result = await _postRequest(Constantes.urlApi, envelope);
+      return result['sucesso'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<String?> obterPreferencia(String email, String chave) async {
+    try {
+      final body = '''
+      <email>$email</email>
+      <chave>$chave</chave>
+    ''';
+      final envelope = _buildEnvelope('obterPreferencia', body);
+      final result = await _postRequest(Constantes.urlApi, envelope);
+      if (result['sucesso'] == true) {
+        return result['mensagem'];
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<List<PerfilItem>> obterPerfilUtilizador(String email) async {
+    try {
+      final body = '<email>$email</email>';
+      final envelope = _buildEnvelope('obterPerfilUtilizador', body);
+
+      final response = await http.post(
+        Uri.parse(Constantes.urlApi),
+        headers: {'Content-Type': 'text/xml'},
+        body: envelope,
+      );
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final items = doc.findAllElements('item');
+        List<PerfilItem> perfis = [];
+
+        for (var item in items) {
+          final texto = item.innerText;
+          final partes = texto.split('|');
+          if (partes.length >= 2) {
+            perfis.add(PerfilItem(chave: partes[0], valor: partes[1]));
+          }
+        }
+        return perfis;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<bool> removerPreferencia(String email, String chave) async {
+    try {
+      final body = '''
+      <email>$email</email>
+      <chave>$chave</chave>
+    ''';
+      final envelope = _buildEnvelope('removerPreferencia', body);
+      final result = await _postRequest(Constantes.urlApi, envelope);
+      return result['sucesso'] == true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

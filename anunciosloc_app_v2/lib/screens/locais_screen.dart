@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/api_service.dart';
-import '../services/localizacao_service.dart';
 import '../utils/constantes.dart';
+import '../utils/preferencias.dart';
+import 'cadastro_local_screen.dart';
 
 class LocaisScreen extends StatefulWidget {
   const LocaisScreen({super.key});
@@ -12,203 +12,121 @@ class LocaisScreen extends StatefulWidget {
 }
 
 class _LocaisScreenState extends State<LocaisScreen> {
-  GoogleMapController? _mapController;
-  final Set<Marker> _markers = {};
-  LatLng? _centro;
-  List<Map<String, dynamic>> _infraestruturas = [];
+  List<Map<String, dynamic>> _locais = [];
   bool _carregando = true;
-  String _erro = '';
 
   @override
   void initState() {
     super.initState();
-    _carregarInfraestruturas();
+    _carregarLocais();
   }
 
-  Future<void> _carregarInfraestruturas() async {
-    setState(() {
-      _carregando = true;
-      _erro = '';
-    });
-
-    try {
-      // Obter localizacao
-      final temPermissao = await LocalizacaoService.verificarPermissoes();
-
-      if (temPermissao) {
-        final localizacao = await LocalizacaoService.obterLocalizacaoAtual();
-        setState(() {
-          _centro = LatLng(localizacao.latitude, localizacao.longitude);
-        });
-        print("Centro definido: $_centro");
-      } else {
-        setState(() {
-          _centro = const LatLng(-8.838333, 13.234444);
-        });
-        print("Sem permissao, usando centro padrao");
-      }
-
-      // Usar o metodo listarLocaisCoordenadas
-      final locais = await ApiService.listarLocaisCoordenadas();
-      print("Locais recebidos: ${locais.length}");
-
+  Future<void> _carregarLocais() async {
+    setState(() => _carregando = true);
+    final locais = await ApiService.listarLocaisCoordenadas();
+    if (mounted) {
       setState(() {
-        _infraestruturas = locais;
+        _locais = locais;
         _carregando = false;
-        _adicionarMarkers();
       });
-    } catch (e) {
-      print("Erro ao carregar: $e");
-      setState(() {
-        _carregando = false;
-        _erro = e.toString();
-      });
-    }
-  }
-
-  void _adicionarMarkers() {
-    _markers.clear();
-    print("Adicionando markers. Centro: $_centro");
-    print("Infraestruturas: ${_infraestruturas.length}");
-
-    if (_centro != null) {
-      _markers.add(
-        Marker(
-          markerId: const MarkerId('minha_localizacao'),
-          position: _centro!,
-          infoWindow: const InfoWindow(title: 'Minha Localização'),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        ),
-      );
-    }
-
-    for (var infra in _infraestruturas) {
-      final lat = infra['latitude'] as double;
-      final lng = infra['longitude'] as double;
-      final nome = infra['nome'] as String;
-      final capacidade = infra['capacidade'] as int;
-
-      print("Adicionando marker: $nome em ($lat, $lng)");
-
-      _markers.add(
-        Marker(
-          markerId: MarkerId(nome),
-          position: LatLng(lat, lng),
-          infoWindow: InfoWindow(
-            title: nome,
-            snippet: 'Capacidade: $capacidade utilizadores',
-          ),
-          icon:
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        ),
-      );
-    }
-
-    // Forcar atualizacao do mapa
-    if (_mapController != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: _centro ?? const LatLng(-8.838333, 13.234444),
-            zoom: Constantes.zoomPadrao,
-          ),
-        ),
-      );
-    }
-  }
-
-  void _moverParaLocalizacao() async {
-    if (_mapController != null && _centro != null) {
-      await _mapController!.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(target: _centro!, zoom: Constantes.zoomPadrao),
-        ),
-      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_carregando) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_erro.isNotEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Infraestruturas Próximas'),
-          backgroundColor: Constantes.corPrincipal,
-          foregroundColor: Colors.white,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Erro ao carregar: $_erro'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _carregarInfraestruturas,
-                child: const Text('Tentar novamente'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_centro == null) {
-      return const Scaffold(
-        body: Center(child: Text('Não foi possível obter localização')),
-      );
-    }
-
-    if (_infraestruturas.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Infraestruturas Próximas'),
-          backgroundColor: Constantes.corPrincipal,
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: Text('Nenhuma infraestrutura encontrada'),
-        ),
-      );
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Infraestruturas Próximas'),
+        title: const Text('Infraestruturas'),
         backgroundColor: Constantes.corPrincipal,
         foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _centro!,
-              zoom: Constantes.zoomPadrao,
-            ),
-            markers: _markers,
-            onMapCreated: (controller) {
-              _mapController = controller;
-            },
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled: true,
-          ),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              onPressed: _moverParaLocalizacao,
-              child: const Icon(Icons.my_location),
-            ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _carregarLocais,
           ),
         ],
+      ),
+      body: _carregando
+          ? const Center(child: CircularProgressIndicator())
+          : _locais.isEmpty
+              ? const Center(child: Text('Nenhuma infraestrutura encontrada'))
+              : ListView.builder(
+                  itemCount: _locais.length,
+                  itemBuilder: (context, index) {
+                    final local = _locais[index];
+                    return Card(
+                      margin: const EdgeInsets.all(8),
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ExpansionTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Constantes.corPrincipal,
+                          child: const Icon(Icons.location_city,
+                              color: Colors.white),
+                        ),
+                        title: Text(
+                          local['nome'],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                            'Capacidade: ${local['capacidade']} utilizadores'),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Coordenadas:',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.location_on,
+                                          color: Colors.red),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                          'Latitude: ${local['latitude']}\nLongitude: ${local['longitude']}'),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.people,
+                                        size: 16, color: Colors.grey[600]),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                        '${local['capacidade']} utilizadores simultâneos'),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const CadastroLocalScreen()),
+          );
+          if (result == true && mounted) {
+            _carregarLocais();
+          }
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

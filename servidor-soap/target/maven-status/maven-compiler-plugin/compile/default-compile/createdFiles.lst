@@ -3,6 +3,7 @@ pt\anunciosloc\server\publisher\ServidorPublisher.class
 pt\anunciosloc\server\repository\RestricaoRepository.class
 pt\anunciosloc\server\client\InfraClient.class
 pt\anunciosloc\server\model\Infraestrutura.class
+pt\anunciosloc\server\repository\PerfilUtilizadorRepository.class
 pt\anunciosloc\server\repository\VisualizacaoRepository.class
 pt\anunciosloc\server\repository\SessaoRepository.class
 pt\anunciosloc\server\service\AnunciosLocServiceImpl.class
