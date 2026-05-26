@@ -1,41 +1,47 @@
 package pt.anunciosloc.infra.service;
 
 import jakarta.jws.WebService;
+import pt.anunciosloc.infra.config.ConnectionFactory;
 import pt.anunciosloc.infra.model.Local;
 import pt.anunciosloc.infra.repository.InfraRepository;
 import pt.anunciosloc.infra.repository.SaldoRepository;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-@WebService(endpointInterface = "pt.anunciosloc.shared.InfraService", 
-           targetNamespace = "http://service.infra.anunciosloc.pt/")
+// CORRIGIR: apontar para a interface correta
+@WebService(
+    endpointInterface = "pt.anunciosloc.infra.service.InfraService",
+    targetNamespace = "http://service.infra.anunciosloc.pt/"
+)
 public class InfraServiceImpl implements InfraService {
-    
+
     private String nome;
     private InfraRepository infraRepo;
     private SaldoRepository saldoRepo;
-    
+
     public InfraServiceImpl() {
         this.infraRepo = new InfraRepository();
         this.saldoRepo = new SaldoRepository();
-        
+
         try {
             this.nome = infraRepo.obterNomeInfraestrutura();
         } catch (SQLException e) {
             this.nome = "Infraestrutura Central";
             System.err.println("Erro ao obter nome: " + e.getMessage());
         }
-        
+
         System.out.println("=== INFRAESTRUTURA INICIADA COM MYSQL ===");
         System.out.println("Nome: " + nome);
         System.out.println("Porta: 8081");
         System.out.println("=========================================");
     }
-    
+
     @Override
     public String getNome() {
         return nome;
     }
-    
+
     @Override
     public Local getLocal() {
         try {
@@ -45,7 +51,7 @@ public class InfraServiceImpl implements InfraService {
             return new Local("Largo da Independencia", "GPS", -8.838333, 13.234444, 20);
         }
     }
-    
+
     @Override
     public int getCapacidade() {
         try {
@@ -55,7 +61,7 @@ public class InfraServiceImpl implements InfraService {
             return 100;
         }
     }
-    
+
     @Override
     public int getUtilizadoresConectados() {
         try {
@@ -65,7 +71,7 @@ public class InfraServiceImpl implements InfraService {
             return 0;
         }
     }
-    
+
     @Override
     public int getTotalAnuncios() {
         try {
@@ -75,7 +81,7 @@ public class InfraServiceImpl implements InfraService {
             return 0;
         }
     }
-    
+
     @Override
     public int getTotalEntregas() {
         try {
@@ -85,7 +91,7 @@ public class InfraServiceImpl implements InfraService {
             return 0;
         }
     }
-    
+
     @Override
     public String obterInfoInfraestrutura() {
         try {
@@ -101,12 +107,47 @@ public class InfraServiceImpl implements InfraService {
             return "Erro ao obter info: " + e.getMessage();
         }
     }
-    
+
     @Override
-    public String criarLocal(Local local) {
-        return "Funcionalidade em implementacao";
+    public String criarLocal(String nome, String tipo, double latitude, double longitude, 
+                             double raio, String wifiSsid, long infraestruturaId) {
+        System.out.println("=== CRIAR LOCAL ===");
+        System.out.println("Nome: " + nome);
+        System.out.println("Tipo: " + tipo);
+        System.out.println("Latitude: " + latitude);
+        System.out.println("Longitude: " + longitude);
+        System.out.println("Raio: " + raio);
+        System.out.println("InfraestruturaId: " + infraestruturaId);
+        
+        try {
+            String sql = "INSERT INTO locais (nome, tipo, latitude, longitude, raio, wifi_ssid, infraestrutura_id) " +
+                         "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                
+                stmt.setString(1, nome);
+                stmt.setString(2, tipo);
+                stmt.setDouble(3, latitude);
+                stmt.setDouble(4, longitude);
+                stmt.setDouble(5, raio);
+                stmt.setString(6, wifiSsid != null ? wifiSsid : "");
+                stmt.setLong(7, infraestruturaId);
+                
+                int rows = stmt.executeUpdate();
+                System.out.println("Linhas inseridas: " + rows);
+            }
+            
+            System.out.println("Local criado com sucesso: " + nome);
+            return "Local criado com sucesso: " + nome;
+            
+        } catch (SQLException e) {
+            System.err.println("ERRO SQL: " + e.getMessage());
+            e.printStackTrace();
+            return "Erro ao criar local: " + e.getMessage();
+        }
     }
-    
+
     @Override
     public int obterSaldo(String email) {
         try {
@@ -118,7 +159,7 @@ public class InfraServiceImpl implements InfraService {
             return 0;
         }
     }
-    
+
     @Override
     public String escreverSaldo(String email, int valor) {
         try {
@@ -131,7 +172,7 @@ public class InfraServiceImpl implements InfraService {
             return "Erro: " + e.getMessage();
         }
     }
-    
+
     @Override
     public String incrementarUtilizadoresConectados() {
         try {
@@ -142,7 +183,7 @@ public class InfraServiceImpl implements InfraService {
             return "Erro: " + e.getMessage();
         }
     }
-    
+
     @Override
     public String decrementarUtilizadoresConectados() {
         try {
@@ -153,7 +194,7 @@ public class InfraServiceImpl implements InfraService {
             return "Erro: " + e.getMessage();
         }
     }
-    
+
     @Override
     public String incrementarAnunciosPublicados() {
         try {
@@ -164,7 +205,7 @@ public class InfraServiceImpl implements InfraService {
             return "Erro: " + e.getMessage();
         }
     }
-    
+
     @Override
     public String incrementarAnunciosEntregues() {
         try {
@@ -175,12 +216,12 @@ public class InfraServiceImpl implements InfraService {
             return "Erro: " + e.getMessage();
         }
     }
-    
+
     @Override
     public String ping() {
         return "Infraestrutura '" + nome + "' ativa com MySQL!";
     }
-    
+
     @Override
     public String registrarNoUDDI() {
         return "Registado no UDDI";

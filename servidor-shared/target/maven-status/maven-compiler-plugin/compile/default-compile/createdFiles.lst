@@ -1,6 +1,8 @@
 pt\anunciosloc\shared\InfraService.class
 pt\anunciosloc\shared\ServicoRegistado.class
 pt\anunciosloc\shared\LoginResponse.class
-pt\anunciosloc\shared\UDDIService.class
 pt\anunciosloc\shared\AuthService.class
+pt\anunciosloc\shared\Restricao.class
+pt\anunciosloc\shared\UDDIService.class
+pt\anunciosloc\shared\PerfilUtilizador.class
 pt\anunciosloc\shared\Ticket.class

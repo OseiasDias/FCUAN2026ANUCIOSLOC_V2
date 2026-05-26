@@ -673,9 +673,10 @@ class ApiService {
     required String criadorEmail,
   }) async {
     try {
+      // Usar o servidor INFRA (porta 8081) em vez do principal
       final envelope = '''<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-    xmlns:ns="${Constantes.namespace}">
+    xmlns:ns="${Constantes.namespaceInfra}">
   <soap:Body>
     <ns:criarLocal>
       <nome>$nome</nome>
@@ -684,18 +685,41 @@ class ApiService {
       <longitude>$longitude</longitude>
       <raio>$raio</raio>
       <wifiSsid>$wifiSsid</wifiSsid>
-      <criadorEmail>$criadorEmail</criadorEmail>
+      <infraestruturaId>1</infraestruturaId>
     </ns:criarLocal>
   </soap:Body>
 </soap:Envelope>''';
 
-      final response = await http.post(
-        Uri.parse(Constantes.urlApi),
-        headers: {'Content-Type': 'text/xml'},
-        body: envelope,
-      );
-      return response.statusCode == 200;
+      print("=== CRIAR LOCAL ===");
+      print("URL: ${Constantes.urlInfra}");
+      print("Envelope: $envelope");
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlInfra), // USAR URL INFRA, nao urlApi
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+              'SOAPAction': '',
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      print("Status: ${response.statusCode}");
+      print("Response: ${response.body}");
+
+      // Verificar se o local foi criado com sucesso
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final result =
+            doc.findAllElements('return').firstOrNull?.innerText ?? '';
+        print("Resultado: $result");
+        return result.contains('sucesso') || result.contains('criado');
+      }
+
+      return false;
     } catch (e) {
+      print("Erro ao criar local: $e");
       return false;
     }
   }
