@@ -75,10 +75,14 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: const Text(
                 'Sair',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
               ),
             ),
           ],
@@ -91,37 +95,61 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(Constantes.nomeApp),
+        title: Text(
+          Constantes.nomeApp,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
         centerTitle: true,
+        elevation: 3,
+        shadowColor: Colors.black45,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, color: Colors.red),
             onPressed: _sair,
+            tooltip: 'Sair da conta',
           ),
         ],
       ),
       body: _carregando
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
+          : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // CARD DO PERFIL
+                  // CARD DO PERFIL - Com sombra mais visível
                   Card(
+                    elevation: 5,
+                    shadowColor: Constantes.corPrincipal.withValues(alpha: 0.3),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
                               color: Constantes.corPrincipal
                                   .withValues(alpha: 0.1),
                               shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Constantes.corPrincipal
+                                      .withValues(alpha: 0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: const Icon(
                               Icons.person,
                               color: Constantes.corPrincipal,
+                              size: 28,
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -129,35 +157,41 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // NOME
                                 Text(
                                   _nome.isNotEmpty ? _nome : "Sem nome",
                                   style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
                                   ),
                                 ),
-
                                 const SizedBox(height: 4),
-
-                                // EMAIL
                                 Text(
                                   _email,
                                   style: const TextStyle(
                                     fontSize: 13,
                                     color: Colors.grey,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-
-                                const SizedBox(height: 6),
-
-                                // SALDO
-                                Text(
-                                  'Saldo: $_saldo pontos',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Constantes.corPrincipal,
-                                    fontWeight: FontWeight.bold,
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Constantes.corPrincipal
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Saldo: $_saldo pontos',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Constantes.corPrincipal,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -170,95 +204,104 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   const SizedBox(height: 24),
 
-                  // GRID DE BOTÕES
-                  Expanded(
-                    child: GridView.count(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                        // No metodo build, atualizar os botoes do GridView:
-                        children: [
-                          _botaoMenu(
-                            icone: Icons.edit,
-                            titulo: 'Publicar',
-                            subtitulo: 'Criar anúncio',
-                            cor: Colors.blue,
-                            aoClicar: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const PostarAnuncioScreen()),
-                              ).then((_) => _carregarDados());
-                            },
-                          ),
-                          _botaoMenu(
-                            icone: Icons.download,
-                            titulo: 'Receber',
-                            subtitulo: 'Ver anúncios',
-                            cor: Colors.green,
-                            aoClicar: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) =>
-                                        const ReceberAnunciosScreen()),
-                              );
-                            },
-                          ),
-                          _botaoMenu(
-                            icone: Icons.list_alt,
-                            titulo: 'Meus Anúncios',
-                            subtitulo: 'Gerir publicados',
-                            cor: Colors.red,
-                            aoClicar: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const MeusAnunciosScreen()),
-                              );
-                            },
-                          ),
-                          _botaoMenu(
-                            icone: Icons.person,
-                            titulo: 'Perfil',
-                            subtitulo: 'Meus dados',
-                            cor: Colors.orange,
-                            aoClicar: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const PerfilScreen()),
-                              ).then((_) => _carregarDados());
-                            },
-                          ),
-                          _botaoMenu(
-                            icone: Icons.map,
-                            titulo: 'Mapa',
-                            subtitulo: 'Ver locais',
-                            cor: Colors.purple,
-                            aoClicar: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const LocaisScreen()),
-                              );
-                            },
-                          ),
-                          _botaoMenu(
-                            icone: Icons.swap_horiz,
-                            titulo: 'Entrega',
-                            subtitulo: 'Opções avançadas',
-                            cor: Colors.teal,
-                            aoClicar: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const EntregaScreen()),
-                              );
-                            },
-                          ),
-                        ]),
+                  // TÍTULO DO MENU
+                  const Text(
+                    'Menu Principal',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // GRID DE BOTÕES - Corrigido overflow com shrinkWrap
+                  GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _botaoMenu(
+                        icone: Icons.edit,
+                        titulo: 'Publicar',
+                        subtitulo: 'Criar anúncio',
+                        cor: Colors.blue,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const PostarAnuncioScreen()),
+                          ).then((_) => _carregarDados());
+                        },
+                      ),
+                      _botaoMenu(
+                        icone: Icons.download,
+                        titulo: 'Receber',
+                        subtitulo: 'Ver anúncios',
+                        cor: Colors.green,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ReceberAnunciosScreen()),
+                          );
+                        },
+                      ),
+                      _botaoMenu(
+                        icone: Icons.list_alt,
+                        titulo: 'Meus Anúncios',
+                        subtitulo: 'Gerir publicados',
+                        cor: Colors.red,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const MeusAnunciosScreen()),
+                          );
+                        },
+                      ),
+                      _botaoMenu(
+                        icone: Icons.person_outline,
+                        titulo: 'Perfil',
+                        subtitulo: 'Meus dados',
+                        cor: Colors.orange,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const PerfilScreen()),
+                          ).then((_) => _carregarDados());
+                        },
+                      ),
+                      _botaoMenu(
+                        icone: Icons.map,
+                        titulo: 'Mapa',
+                        subtitulo: 'Ver locais',
+                        cor: Colors.purple,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const LocaisScreen()),
+                          );
+                        },
+                      ),
+                      _botaoMenu(
+                        icone: Icons.local_shipping,
+                        titulo: 'Entrega',
+                        subtitulo: 'Opções avançadas',
+                        cor: Colors.teal,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const EntregaScreen()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -274,34 +317,64 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback aoClicar,
   }) {
     return Card(
-      elevation: 2,
+      elevation: 6,
+      shadowColor: cor.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
       child: InkWell(
         onTap: aoClicar,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icone, size: 48, color: cor),
-              const SizedBox(height: 12),
-              Text(
-                titulo,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white,
+                cor.withValues(alpha: 0.05),
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: cor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icone, size: 32, color: cor),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitulo,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  titulo,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),

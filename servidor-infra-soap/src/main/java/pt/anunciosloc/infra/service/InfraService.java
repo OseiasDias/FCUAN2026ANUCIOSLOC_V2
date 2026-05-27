@@ -40,14 +40,31 @@ public interface InfraService {
             @WebParam(name = "longitude") double longitude,
             @WebParam(name = "raio") double raio,
             @WebParam(name = "wifiSsid") String wifiSsid,
-            @WebParam(name = "infraestruturaId") long infraestruturaId);
+            @WebParam(name = "infraestruturaId") long infraestruturaId,
+            @WebParam(name = "email") String email);
+
+    @WebMethod
+    String[] listarLocaisPorUtilizador(@WebParam(name = "email") String email);
+
+    @WebMethod
+    String atualizarLocal(
+            @WebParam(name = "id") int id,
+            @WebParam(name = "nome") String nome,
+            @WebParam(name = "tipo") String tipo,
+            @WebParam(name = "latitude") double latitude,
+            @WebParam(name = "longitude") double longitude,
+            @WebParam(name = "raio") double raio,
+            @WebParam(name = "wifiSsid") String wifiSsid);
+
+    @WebMethod
+    String eliminarLocal(@WebParam(name = "id") int id);
 
     @WebMethod
     int obterSaldo(@WebParam(name = "email") String email);
 
     @WebMethod
     String escreverSaldo(@WebParam(name = "email") String email,
-            @WebParam(name = "valor") int valor);
+                         @WebParam(name = "valor") int valor);
 
     @WebMethod
     String incrementarUtilizadoresConectados();

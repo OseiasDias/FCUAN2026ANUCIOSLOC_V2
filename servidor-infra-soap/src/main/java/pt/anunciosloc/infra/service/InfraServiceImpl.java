@@ -7,13 +7,13 @@ import pt.anunciosloc.infra.repository.InfraRepository;
 import pt.anunciosloc.infra.repository.SaldoRepository;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
-// CORRIGIR: apontar para a interface correta
-@WebService(
-    endpointInterface = "pt.anunciosloc.infra.service.InfraService",
-    targetNamespace = "http://service.infra.anunciosloc.pt/"
-)
+@WebService(endpointInterface = "pt.anunciosloc.infra.service.InfraService", 
+           targetNamespace = "http://service.infra.anunciosloc.pt/")
 public class InfraServiceImpl implements InfraService {
 
     private String nome;
@@ -110,18 +110,31 @@ public class InfraServiceImpl implements InfraService {
 
     @Override
     public String criarLocal(String nome, String tipo, double latitude, double longitude, 
-                             double raio, String wifiSsid, long infraestruturaId) {
+                             double raio, String wifiSsid, long infraestruturaId, String email) {
         System.out.println("=== CRIAR LOCAL ===");
         System.out.println("Nome: " + nome);
-        System.out.println("Tipo: " + tipo);
-        System.out.println("Latitude: " + latitude);
-        System.out.println("Longitude: " + longitude);
-        System.out.println("Raio: " + raio);
-        System.out.println("InfraestruturaId: " + infraestruturaId);
+        System.out.println("Email: " + email);
         
         try {
-            String sql = "INSERT INTO locais (nome, tipo, latitude, longitude, raio, wifi_ssid, infraestrutura_id) " +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            // Buscar ID do utilizador pelo email
+            String sqlUser = "SELECT id FROM utilizadores WHERE email = ?";
+            Long userId = null;
+            
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sqlUser)) {
+                stmt.setString(1, email);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    userId = rs.getLong("id");
+                }
+            }
+            
+            if (userId == null) {
+                return "Erro: Utilizador nao encontrado com email: " + email;
+            }
+            
+            String sql = "INSERT INTO locais (nome, tipo, latitude, longitude, raio, wifi_ssid, infraestrutura_id, criado_por) " +
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             
             try (Connection conn = ConnectionFactory.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -133,18 +146,103 @@ public class InfraServiceImpl implements InfraService {
                 stmt.setDouble(5, raio);
                 stmt.setString(6, wifiSsid != null ? wifiSsid : "");
                 stmt.setLong(7, infraestruturaId);
-                
-                int rows = stmt.executeUpdate();
-                System.out.println("Linhas inseridas: " + rows);
+                stmt.setLong(8, userId);
+                stmt.executeUpdate();
             }
             
             System.out.println("Local criado com sucesso: " + nome);
             return "Local criado com sucesso: " + nome;
             
         } catch (SQLException e) {
-            System.err.println("ERRO SQL: " + e.getMessage());
             e.printStackTrace();
             return "Erro ao criar local: " + e.getMessage();
+        }
+    }
+
+    @Override
+    public String[] listarLocaisPorUtilizador(String email) {
+        System.out.println("=== LISTAR LOCAS POR UTILIZADOR ===");
+        System.out.println("Email: " + email);
+        
+        try {
+            String sql = "SELECT id, nome, tipo, latitude, longitude, raio, wifi_ssid FROM locais ORDER BY id DESC";
+            List<String> locais = new ArrayList<>();
+            
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql);
+                 ResultSet rs = stmt.executeQuery()) {
+                
+                while (rs.next()) {
+                    String data = rs.getInt("id") + "|" +
+                                  rs.getString("nome") + "|" +
+                                  rs.getString("tipo") + "|" +
+                                  rs.getDouble("latitude") + "|" +
+                                  rs.getDouble("longitude") + "|" +
+                                  rs.getDouble("raio") + "|" +
+                                  (rs.getString("wifi_ssid") != null ? rs.getString("wifi_ssid") : "");
+                    locais.add(data);
+                }
+            }
+            
+            return locais.toArray(new String[0]);
+            
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar locais: " + e.getMessage());
+            return new String[0];
+        }
+    }
+
+    @Override
+    public String atualizarLocal(int id, String nome, String tipo, double latitude, 
+                                 double longitude, double raio, String wifiSsid) {
+        System.out.println("=== ATUALIZAR LOCAL ===");
+        System.out.println("ID: " + id);
+        System.out.println("Nome: " + nome);
+        
+        try {
+            String sql = "UPDATE locais SET nome = ?, tipo = ?, latitude = ?, longitude = ?, " +
+                         "raio = ?, wifi_ssid = ? WHERE id = ?";
+            
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                
+                stmt.setString(1, nome);
+                stmt.setString(2, tipo);
+                stmt.setDouble(3, latitude);
+                stmt.setDouble(4, longitude);
+                stmt.setDouble(5, raio);
+                stmt.setString(6, wifiSsid != null ? wifiSsid : "");
+                stmt.setInt(7, id);
+                stmt.executeUpdate();
+            }
+            
+            return "Local atualizado com sucesso: " + nome;
+            
+        } catch (SQLException e) {
+            return "Erro ao atualizar local: " + e.getMessage();
+        }
+    }
+
+    @Override
+    public String eliminarLocal(int id) {
+        System.out.println("=== ELIMINAR LOCAL ===");
+        System.out.println("ID: " + id);
+        
+        try {
+            String sql = "DELETE FROM locais WHERE id = ?";
+            
+            try (Connection conn = ConnectionFactory.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+                
+                stmt.setInt(1, id);
+                int rows = stmt.executeUpdate();
+                System.out.println("Linhas eliminadas: " + rows);
+            }
+            
+            return "Local eliminado com sucesso!";
+            
+        } catch (SQLException e) {
+            return "Erro ao eliminar local: " + e.getMessage();
         }
     }
 

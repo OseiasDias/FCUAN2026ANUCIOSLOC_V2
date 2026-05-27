@@ -1,8 +1,0 @@
-pt\anunciosloc\infra\model\Local.class
-pt\anunciosloc\infra\repository\SaldoRepository.class
-pt\anunciosloc\infra\service\InfraService.class
-pt\anunciosloc\infra\config\ConnectionFactory.class
-pt\anunciosloc\infra\InfraServer.class
-pt\anunciosloc\infra\model\SaldoUtilizador.class
-pt\anunciosloc\infra\service\InfraServiceImpl.class
-pt\anunciosloc\infra\repository\InfraRepository.class

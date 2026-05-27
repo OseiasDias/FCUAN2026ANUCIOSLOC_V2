@@ -685,14 +685,14 @@ class ApiService {
       <raio>$raio</raio>
       <wifiSsid>$wifiSsid</wifiSsid>
       <infraestruturaId>1</infraestruturaId>
+      <email>$criadorEmail</email>
     </ns:criarLocal>
   </soap:Body>
 </soap:Envelope>''';
 
       print("=== CRIAR LOCAL ===");
       print("URL: ${Constantes.urlInfra}");
-      print("IP: ${Constantes.ipServidor}");
-      print("Porta: ${Constantes.portaInfra}");
+      print("Email: $criadorEmail");
       print("Envelope: $envelope");
 
       final response = await http
@@ -706,24 +706,174 @@ class ApiService {
           .timeout(const Duration(seconds: Constantes.tempoEspera));
 
       print("Status: ${response.statusCode}");
-      print("Response body: ${response.body}");
+      print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
         final result =
             doc.findAllElements('return').firstOrNull?.innerText ?? '';
         print("Resultado: $result");
-
-        // Verificar se o local foi criado
-        if (result.contains('sucesso') || result.contains('criado')) {
-          return true;
-        }
+        return result.contains('sucesso') || result.contains('criado');
       }
 
       return false;
     } catch (e) {
-      print("ERRO ao criar local: $e");
+      print("Erro ao criar local: $e");
       return false;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> listarTodosLocais() async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespaceInfra}">
+  <soap:Body>
+    <ns:listarLocais/>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http.post(
+        Uri.parse(Constantes.urlInfra),
+        headers: {'Content-Type': 'text/xml'},
+        body: envelope,
+      );
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final items = doc.findAllElements('return');
+        List<Map<String, dynamic>> locais = [];
+
+        for (var item in items) {
+          final texto = item.innerText;
+          final partes = texto.split('|');
+          if (partes.length >= 4) {
+            locais.add({
+              'id': int.tryParse(partes[0] ?? '0') ?? 0,
+              'nome': partes[1] ?? '',
+              'tipo': partes[2] ?? 'GPS',
+              'latitude': double.tryParse(partes[3] ?? '0') ?? 0,
+              'longitude': double.tryParse(partes[4] ?? '0') ?? 0,
+              'raio': double.tryParse(partes[5] ?? '20') ?? 20,
+              'wifiSsid': partes.length > 6 ? partes[6] : '',
+            });
+          }
+        }
+        return locais;
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  static Future<bool> eliminarLocal(int id) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespaceInfra}">
+  <soap:Body>
+    <ns:eliminarLocal>
+      <id>$id</id>
+    </ns:eliminarLocal>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http.post(
+        Uri.parse(Constantes.urlInfra),
+        headers: {'Content-Type': 'text/xml'},
+        body: envelope,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<bool> atualizarLocal({
+    required int id,
+    required String nome,
+    required String tipo,
+    required double latitude,
+    required double longitude,
+    required double raio,
+    required String wifiSsid,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespaceInfra}">
+  <soap:Body>
+    <ns:atualizarLocal>
+      <id>$id</id>
+      <nome>$nome</nome>
+      <tipo>$tipo</tipo>
+      <latitude>$latitude</latitude>
+      <longitude>$longitude</longitude>
+      <raio>$raio</raio>
+      <wifiSsid>$wifiSsid</wifiSsid>
+    </ns:atualizarLocal>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http.post(
+        Uri.parse(Constantes.urlInfra),
+        headers: {'Content-Type': 'text/xml'},
+        body: envelope,
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> listarMeusLocais(
+      String email) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespaceInfra}">
+  <soap:Body>
+    <ns:listarLocaisPorUtilizador>
+      <email>$email</email>
+    </ns:listarLocaisPorUtilizador>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlInfra),
+            headers: {'Content-Type': 'text/xml'},
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final items = doc.findAllElements('return');
+        List<Map<String, dynamic>> locais = [];
+
+        for (var item in items) {
+          final texto = item.innerText;
+          final partes = texto.split('|');
+          if (partes.length >= 6) {
+            locais.add({
+              'id': int.tryParse(partes[0]) ?? 0,
+              'nome': partes[1],
+              'tipo': partes[2],
+              'latitude': double.tryParse(partes[3]) ?? 0,
+              'longitude': double.tryParse(partes[4]) ?? 0,
+              'raio': double.tryParse(partes[5]) ?? 20,
+              'wifiSsid': partes.length > 6 ? partes[6] : '',
+            });
+          }
+        }
+        return locais;
+      }
+      return [];
+    } catch (e) {
+      print("Erro ao listar meus locais: $e");
+      return [];
     }
   }
 }
