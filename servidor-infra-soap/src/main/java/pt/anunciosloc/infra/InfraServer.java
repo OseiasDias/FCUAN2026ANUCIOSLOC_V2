@@ -5,7 +5,8 @@ import pt.anunciosloc.infra.service.InfraServiceImpl;
 
 public class InfraServer {
     public static void main(String[] args) {
-        String url = "http://localhost:8081/infra";
+        // Mudar para 0.0.0.0 para aceitar conexoes de qualquer IP
+        String url = "http://0.0.0.0:8081/infra";
         
         System.out.println("=========================================");
         System.out.println("INFRAESTRUTURA SOAP");
