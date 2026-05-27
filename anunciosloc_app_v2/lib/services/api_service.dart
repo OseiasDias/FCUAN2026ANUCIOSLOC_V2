@@ -840,6 +840,10 @@ class ApiService {
   </soap:Body>
 </soap:Envelope>''';
 
+      print("=== LISTAR MEUS LOCAIS ===");
+      print("URL: ${Constantes.urlInfra}");
+      print("Email: $email");
+
       final response = await http
           .post(
             Uri.parse(Constantes.urlInfra),
@@ -848,26 +852,58 @@ class ApiService {
           )
           .timeout(const Duration(seconds: Constantes.tempoEspera));
 
+      print("Status: ${response.statusCode}");
+      print("Response body: ${response.body}");
+
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
-        final items = doc.findAllElements('return');
+
+        // Procurar por todos os elementos 'return'
+        final returns = doc.findAllElements('return');
+        print("Numero de elementos 'return' encontrados: ${returns.length}");
+
         List<Map<String, dynamic>> locais = [];
 
-        for (var item in items) {
-          final texto = item.innerText;
-          final partes = texto.split('|');
-          if (partes.length >= 6) {
-            locais.add({
-              'id': int.tryParse(partes[0]) ?? 0,
-              'nome': partes[1],
-              'tipo': partes[2],
-              'latitude': double.tryParse(partes[3]) ?? 0,
-              'longitude': double.tryParse(partes[4]) ?? 0,
-              'raio': double.tryParse(partes[5]) ?? 20,
-              'wifiSsid': partes.length > 6 ? partes[6] : '',
-            });
+        for (var returnElem in returns) {
+          final texto = returnElem.innerText;
+          print("Conteudo do return: $texto");
+
+          // Pode ter multiplos locais em um unico return
+          if (texto.contains('\n') || texto.contains('|')) {
+            // Dividir por linha se houver multiplos
+            final linhas = texto.split(RegExp(r'[\n\r]+'));
+            for (var linha in linhas) {
+              final partes = linha.trim().split('|');
+              if (partes.length >= 6) {
+                locais.add({
+                  'id': int.tryParse(partes[0]) ?? 0,
+                  'nome': partes[1],
+                  'tipo': partes[2],
+                  'latitude': double.tryParse(partes[3]) ?? 0,
+                  'longitude': double.tryParse(partes[4]) ?? 0,
+                  'raio': double.tryParse(partes[5]) ?? 20,
+                  'wifiSsid': partes.length > 6 ? partes[6] : '',
+                });
+              }
+            }
+          } else {
+            // Um unico local
+            final partes = texto.split('|');
+            if (partes.length >= 6) {
+              locais.add({
+                'id': int.tryParse(partes[0]) ?? 0,
+                'nome': partes[1],
+                'tipo': partes[2],
+                'latitude': double.tryParse(partes[3]) ?? 0,
+                'longitude': double.tryParse(partes[4]) ?? 0,
+                'raio': double.tryParse(partes[5]) ?? 20,
+                'wifiSsid': partes.length > 6 ? partes[6] : '',
+              });
+            }
           }
         }
+
+        print("Total de locais parseados: ${locais.length}");
         return locais;
       }
       return [];
