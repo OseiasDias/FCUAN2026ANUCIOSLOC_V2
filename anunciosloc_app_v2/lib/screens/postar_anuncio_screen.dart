@@ -14,19 +14,56 @@ class PostarAnuncioScreen extends StatefulWidget {
 class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
   final _formChave = GlobalKey<FormState>();
   final _conteudoController = TextEditingController();
-  final _localController = TextEditingController();
+  String? _localSelecionado;
+  List<Map<String, dynamic>> _meusLocais = [];
+  bool _carregandoLocais = true;
   bool _carregando = false;
-
   List<Map<String, String>> _restricoes = [];
+
   final _chaveController = TextEditingController();
   final _valorController = TextEditingController();
   String _tipoRestricao = 'WHITELIST';
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarMeusLocais();
+  }
+
+  @override
+  void dispose() {
+    _conteudoController.dispose();
+    _chaveController.dispose();
+    _valorController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _carregarMeusLocais() async {
+    setState(() => _carregandoLocais = true);
+
+    try {
+      final email = await Preferencias.getEmail();
+      final locais = await ApiService.listarMeusLocais(email);
+
+      setState(() {
+        _meusLocais = locais;
+        _carregandoLocais = false;
+        if (_meusLocais.isNotEmpty) {
+          _localSelecionado = _meusLocais[0]['nome'];
+        }
+      });
+    } catch (e) {
+      print("Erro ao carregar locais: $e");
+      setState(() => _carregandoLocais = false);
+    }
+  }
 
   void _mostrarMensagem(String msg, {bool isErro = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
         backgroundColor: isErro ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -57,6 +94,11 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
   Future<void> _publicar() async {
     if (!_formChave.currentState!.validate()) return;
 
+    if (_localSelecionado == null) {
+      _mostrarMensagem('Selecione um local', isErro: true);
+      return;
+    }
+
     setState(() => _carregando = true);
 
     final email = await Preferencias.getEmail();
@@ -64,7 +106,7 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
     final sucesso = await ApiService.publicarAnuncio(
       email: email,
       conteudo: _conteudoController.text,
-      local: _localController.text,
+      local: _localSelecionado!,
     );
 
     if (sucesso && mounted) {
@@ -84,7 +126,6 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
       setState(() => _carregando = false);
       _mostrarMensagem('Anúncio publicado com sucesso!');
       _conteudoController.clear();
-      _localController.clear();
       setState(() => _restricoes.clear());
       Navigator.pop(context);
     } else if (mounted) {
@@ -98,63 +139,59 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Adicionar Política de Audiência'),
-        content: StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Tipo de política:'),
-                const SizedBox(height: 8),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                        value: 'WHITELIST', label: Text('WHITELIST (Apenas)')),
-                    ButtonSegment(
-                        value: 'BLACKLIST', label: Text('BLACKLIST (Exceto)')),
-                  ],
-                  selected: {_tipoRestricao},
-                  onSelectionChanged: (Set<String> selection) {
-                    setStateDialog(() {
-                      _tipoRestricao = selection.first;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 8),
-                if (_tipoRestricao == 'WHITELIST')
-                  const Text(
-                    'Apenas utilizadores com esta característica verão o anúncio',
-                    style: TextStyle(fontSize: 12, color: Colors.blue),
-                  )
-                else
-                  const Text(
-                    'Utilizadores com esta característica NÃO verão o anúncio',
-                    style: TextStyle(fontSize: 12, color: Colors.orange),
-                  ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _chaveController,
-                  decoration: const InputDecoration(
-                    labelText: 'Chave',
-                    hintText: 'Ex: profissao, clube, idade, cidade',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.label),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _valorController,
-                  decoration: const InputDecoration(
-                    labelText: 'Valor',
-                    hintText: 'Ex: estudante, Real Madrid, 25, Luanda',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
-                  ),
-                ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Tipo de política:'),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(
+                    value: 'WHITELIST', label: Text('WHITELIST (Apenas)')),
+                ButtonSegment(
+                    value: 'BLACKLIST', label: Text('BLACKLIST (Exceto)')),
               ],
-            );
-          },
+              selected: {_tipoRestricao},
+              onSelectionChanged: (Set<String> selection) {
+                setState(() {
+                  _tipoRestricao = selection.first;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+            if (_tipoRestricao == 'WHITELIST')
+              const Text(
+                'Apenas utilizadores com esta característica verão o anúncio',
+                style: TextStyle(fontSize: 12, color: Colors.blue),
+              )
+            else
+              const Text(
+                'Utilizadores com esta característica NÃO verão o anúncio',
+                style: TextStyle(fontSize: 12, color: Colors.orange),
+              ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _chaveController,
+              decoration: const InputDecoration(
+                labelText: 'Chave',
+                hintText: 'Ex: profissao, clube, idade, cidade',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.label),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _valorController,
+              decoration: const InputDecoration(
+                labelText: 'Valor',
+                hintText: 'Ex: estudante, Real Madrid, 25, Luanda',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.person),
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -188,6 +225,7 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Conteudo
               CampoTexto(
                 controlador: _conteudoController,
                 rotulo: 'Conteúdo',
@@ -202,18 +240,77 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
               ),
               const SizedBox(height: 16),
 
-              CampoTexto(
-                controlador: _localController,
-                rotulo: 'Local',
-                hint: 'Ex: Largo da Independencia, Belas Shopping...',
-                icone: Icons.location_on,
-                validador: (valor) {
-                  if (valor == null || valor.isEmpty) {
-                    return 'Digite o local do anúncio';
-                  }
-                  return null;
-                },
+              // Select de Local
+              const Text(
+                'Local',
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 8),
+
+              _carregandoLocais
+                  ? const Center(child: CircularProgressIndicator())
+                  : _meusLocais.isEmpty
+                      ? Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Column(
+                            children: [
+                              Icon(Icons.warning, color: Colors.orange),
+                              SizedBox(height: 8),
+                              Text(
+                                'Nenhum local cadastrado',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Cadastre um local primeiro',
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              isExpanded: true,
+                              value: _localSelecionado,
+                              items: _meusLocais.map((local) {
+                                return DropdownMenuItem<String>(
+                                  value: local['nome'],
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        local['tipo'] == 'GPS'
+                                            ? Icons.gps_fixed
+                                            : Icons.wifi,
+                                        size: 18,
+                                        color: local['tipo'] == 'GPS'
+                                            ? Colors.blue
+                                            : Colors.orange,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(local['nome']),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _localSelecionado = value;
+                                });
+                              },
+                            ),
+                          ),
+                        ),
+
               const SizedBox(height: 24),
 
               // Secao de politicas
@@ -237,11 +334,11 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
+                          const Row(
                             children: [
-                              const Icon(Icons.filter_alt, color: Colors.blue),
-                              const SizedBox(width: 8),
-                              const Text(
+                              Icon(Icons.filter_alt, color: Colors.blue),
+                              SizedBox(width: 8),
+                              Text(
                                 'Políticas de Audiência',
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
@@ -312,11 +409,11 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
                   color: Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    Icon(Icons.info_outline, color: Colors.blue.shade700),
-                    const SizedBox(width: 8),
-                    const Expanded(
+                    Icon(Icons.info_outline, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Expanded(
                       child: Text(
                         'Custa 5 pontos por anúncio. O anúncio fica ativo por 30 dias.',
                         style: TextStyle(fontSize: 12),

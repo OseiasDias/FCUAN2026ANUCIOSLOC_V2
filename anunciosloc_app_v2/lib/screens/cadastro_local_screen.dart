@@ -28,10 +28,15 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
   String _enderecoSelecionado = '';
   String _erroLocalizacao = '';
 
+  // Lista de locais do utilizador
+  List<Map<String, dynamic>> _meusLocais = [];
+  bool _carregandoLocais = true;
+
   @override
   void initState() {
     super.initState();
     _carregarLocalizacaoAtual();
+    _carregarMeusLocais();
   }
 
   @override
@@ -40,6 +45,36 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
     _raioController.dispose();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  Future<void> _carregarMeusLocais() async {
+    try {
+      final email = await Preferencias.getEmail();
+
+      if (email.isEmpty) {
+        print("Email nao encontrado nas preferencias");
+        setState(() {
+          _carregandoLocais = false;
+        });
+        return;
+      }
+
+      print("Carregando locais para: $email");
+      final locais = await ApiService.listarMeusLocais(email);
+
+      setState(() {
+        _meusLocais = locais;
+        _carregandoLocais = false;
+      });
+
+      print("Locais carregados: ${locais.length}");
+    } catch (e) {
+      print("Erro ao carregar locais: $e");
+      setState(() {
+        _meusLocais = [];
+        _carregandoLocais = false;
+      });
+    }
   }
 
   Future<void> _carregarLocalizacaoAtual() async {
@@ -144,14 +179,6 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
     final email = await Preferencias.getEmail();
     double raio = double.tryParse(_raioController.text.trim()) ?? 20;
 
-    print("=== ENVIANDO CADASTRO ===");
-    print("Nome: ${_nomeController.text}");
-    print("Tipo: $_tipoLocal");
-    print("Latitude: ${_selectedPosition?.latitude}");
-    print("Longitude: ${_selectedPosition?.longitude}");
-    print("Raio: $raio");
-    print("Email: $email");
-
     final sucesso = await ApiService.criarLocal(
       nome: _nomeController.text.trim(),
       tipo: _tipoLocal,
@@ -166,10 +193,53 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
 
     if (sucesso && mounted) {
       _mostrarMensagem('Local cadastrado com sucesso!');
-      Navigator.pop(context, true);
+      _nomeController.clear();
+      _raioController.clear();
+      _wifiSsid = '';
+      _selectedPosition = null;
+      _markers.clear();
+      await _carregarMeusLocais();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Local cadastrado com sucesso!'),
+            backgroundColor: Colors.green),
+      );
     } else if (mounted) {
       _mostrarMensagem('Erro ao cadastrar local. Verifique o servidor.',
           isErro: true);
+    }
+  }
+
+  Future<void> _eliminarLocal(Map<String, dynamic> local) async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminar Local'),
+        content: Text('Tem certeza que deseja eliminar "${local['nome']}"?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child:
+                const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar == true) {
+      final sucesso = await ApiService.eliminarLocal(local['id']);
+      if (sucesso && mounted) {
+        await _carregarMeusLocais();
+        _mostrarMensagem('Local eliminado com sucesso!');
+      } else if (mounted) {
+        _mostrarMensagem('Erro ao eliminar local', isErro: true);
+      }
     }
   }
 
@@ -179,7 +249,7 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
         content: Text(msg),
         backgroundColor: isErro ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 3),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -188,13 +258,39 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cadastrar Novo Local'),
+        title: const Text('Gestão de Locais'),
         backgroundColor: Constantes.corPrincipal,
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Card da infraestrutura
+            _buildInfraCard(),
+
+            const SizedBox(height: 16),
+
+            // Lista de locais existentes
+            _buildListaLocais(),
+
+            const SizedBox(height: 16),
+
+            // Separador
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(thickness: 2),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'Cadastrar Novo Local',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+            ),
+
             // Tipo de localizacao
             Padding(
               padding: const EdgeInsets.all(16),
@@ -222,9 +318,8 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
             ),
 
             if (_tipoLocal == 'GPS') ...[
-              // Mapa para GPS
               Container(
-                height: 350,
+                height: 300,
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
@@ -258,7 +353,6 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
                             ),
                 ),
               ),
-
               if (_erroLocalizacao.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(8),
@@ -268,7 +362,6 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-
               if (_enderecoSelecionado.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.all(8),
@@ -380,19 +473,12 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Constantes.corPrincipal,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 14, horizontal: 32),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       minimumSize: const Size(double.infinity, 48),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Qualquer utilizador pode cadastrar novos locais',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -400,6 +486,132 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInfraCard() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Constantes.corPrincipal,
+            Constantes.corPrincipal.withValues(alpha: 0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Constantes.corPrincipal.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Infraestrutura',
+              style: TextStyle(fontSize: 12, color: Colors.white70),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.cloud_queue, color: Colors.white, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'Infraestrutura Central',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildListaLocais() {
+    if (_carregandoLocais) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_meusLocais.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.location_off, size: 48, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('Nenhum local cadastrado',
+                  style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            'Meus Locais',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: _meusLocais.length,
+          itemBuilder: (context, index) {
+            final local = _meusLocais[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              elevation: 1,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  local['tipo'] == 'GPS' ? Icons.gps_fixed : Icons.wifi,
+                  color: local['tipo'] == 'GPS' ? Colors.blue : Colors.orange,
+                ),
+                title: Text(
+                  local['nome'],
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
+                subtitle: Text(
+                  local['tipo'] == 'GPS'
+                      ? 'Lat: ${local['latitude']?.toStringAsFixed(4)}, Lng: ${local['longitude']?.toStringAsFixed(4)}'
+                      : 'SSID: ${local['wifiSsid'] ?? 'N/A'}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  onPressed: () => _eliminarLocal(local),
+                ),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 }

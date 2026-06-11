@@ -1,6 +1,7 @@
 package pt.anunciosloc.server.service;
 
 import jakarta.jws.WebService;
+import pt.anunciosloc.server.config.ConnectionFactory;
 import pt.anunciosloc.server.model.*;
 import pt.anunciosloc.server.quorum.QuorumManager;
 import pt.anunciosloc.server.repository.UtilizadorRepository;
@@ -10,6 +11,9 @@ import pt.anunciosloc.server.repository.InfraestruturaRepository;
 import pt.anunciosloc.server.repository.PerfilUtilizadorRepository;
 import pt.anunciosloc.server.repository.RestricaoRepository;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -362,23 +366,52 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
     }
 
     @Override
-    public String[] listarLocaisCoordenadas() {
-        try {
-            List<Infraestrutura> infraList = infraRepo.listarTodas();
-            List<String> result = new ArrayList<>();
-            for (Infraestrutura infra : infraList) {
-                String data = infra.getNome() + "|" +
-                        infra.getLatitude() + "|" +
-                        infra.getLongitude() + "|" +
-                        infra.getCapacidade();
+public String[] listarLocaisCoordenadas() {
+    try {
+        String sql = "SELECT l.id, l.nome, l.tipo, l.latitude, l.longitude, l.raio, l.wifi_ssid, " +
+                     "i.nome as nome_infraestrutura " +
+                     "FROM locais l " +
+                     "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id";
+        
+        List<String> result = new ArrayList<>();
+        
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            
+            while (rs.next()) {
+                String nomeLocal = rs.getString("nome");
+                String tipo = rs.getString("tipo");
+                double latitude = rs.getDouble("latitude");
+                double longitude = rs.getDouble("longitude");
+                double raio = rs.getDouble("raio");
+                String wifiSsid = rs.getString("wifi_ssid");
+                String nomeInfraestrutura = rs.getString("nome_infraestrutura");
+                
+                String data;
+                if ("GPS".equals(tipo)) {
+                    data = nomeLocal + "|" +
+                           tipo + "|" +
+                           latitude + "|" +
+                           longitude + "|" +
+                           raio + "|" +
+                           (nomeInfraestrutura != null ? nomeInfraestrutura : "Sem infraestrutura");
+                } else {
+                    data = nomeLocal + "|" +
+                           tipo + "|" +
+                           (wifiSsid != null ? wifiSsid : "N/A") + "|" +
+                           (nomeInfraestrutura != null ? nomeInfraestrutura : "Sem infraestrutura");
+                }
                 result.add(data);
             }
-            return result.toArray(new String[0]);
-        } catch (SQLException e) {
-            return new String[0];
         }
+        
+        return result.toArray(new String[0]);
+    } catch (SQLException e) {
+        System.err.println("Erro ao listar locais coordenadas: " + e.getMessage());
+        return new String[0];
     }
-
+}
     @Override
     public String salvarPreferencia(String email, String chave, String valor) {
         try {
@@ -470,4 +503,133 @@ public String[] listarRestricoes(String anuncioId) {
         return new String[0];
     }
 }
+
+
+@Override
+public String[] receberAnunciosDeOutros(String email, String local) {
+    System.out.println("=== RECEBER ANUNCIOS DE OUTROS ===");
+    System.out.println("Email: " + email);
+    System.out.println("Local: " + local);
+    
+    try {
+        // 1. Verificar se o utilizador existe
+        Utilizador u = utilizadorRepo.buscarPorEmail(email);
+        if (u == null || !u.isAtivo()) {
+            return new String[]{"Utilizador nao encontrado: " + email};
+        }
+        
+        // 2. Buscar perfil do utilizador (para filtrar por restricoes)
+        Map<String, String> perfil = obterPerfilUtilizadorMap(email);
+        System.out.println("Perfil do utilizador: " + perfil);
+        
+        // 3. Buscar todos os anuncios ativos do local
+        List<Anuncio> todosAnuncios = anuncioRepo.buscarPorLocalAtivo(local);
+        System.out.println("Total de anuncios no local: " + todosAnuncios.size());
+        
+        // 4. Filtrar anuncios (excluir proprios, aplicar restricoes)
+        List<String> anunciosVisiveis = new ArrayList<>();
+        RestricaoRepository restricaoRepo = new RestricaoRepository();
+        
+        for (Anuncio anuncio : todosAnuncios) {
+            // Nao mostrar os proprios anuncios
+            if (anuncio.getAutorEmail().equals(email)) {
+                System.out.println("Ignorando anuncio proprio: " + anuncio.getAutorEmail());
+                continue;
+            }
+            
+            // Verificar se o anuncio ainda esta ativo
+            if (!anuncio.isActivo()) {
+                System.out.println("Anuncio inativo: " + anuncio.getId());
+                continue;
+            }
+            
+            // Verificar se o anuncio nao expirou
+            if (anuncio.isExpirado()) {
+                System.out.println("Anuncio expirado: " + anuncio.getId());
+                continue;
+            }
+            
+            // Buscar ID do anuncio no banco
+            Long anuncioId = obterAnuncioIdPorUUID(anuncio.getId());
+            
+            // Buscar restricoes do anuncio
+            List<Restricao> restricoes = restricaoRepo.listarPorAnuncio(anuncioId);
+            
+            // Verificar se o utilizador satisfaz as restricoes
+            if (satisfazRestricoes(perfil, restricoes)) {
+                String mensagem = formatarAnuncioParaExibicao(anuncio);
+                anunciosVisiveis.add(mensagem);
+                
+                // Registrar visualizacao
+                anuncioRepo.incrementarVisualizacao(anuncio.getId());
+                System.out.println("Anuncio visivel para o utilizador: " + anuncio.getId());
+            } else {
+                System.out.println("Anuncio bloqueado por restricoes: " + anuncio.getId());
+            }
+        }
+        
+        System.out.println("Total de anuncios visiveis: " + anunciosVisiveis.size());
+        return anunciosVisiveis.toArray(new String[0]);
+        
+    } catch (SQLException e) {
+        System.err.println("Erro ao receber anuncios: " + e.getMessage());
+        return new String[]{"Erro: " + e.getMessage()};
+    }
+}
+
+// Metodo auxiliar para obter perfil do utilizador
+private Map<String, String> obterPerfilUtilizadorMap(String email) throws SQLException {
+    Utilizador u = utilizadorRepo.buscarPorEmail(email);
+    if (u == null) return new HashMap<>();
+    
+    PerfilUtilizadorRepository perfilRepo = new PerfilUtilizadorRepository();
+    return perfilRepo.obterPerfil(u.getId());
+}
+
+// Metodo auxiliar para verificar restricoes
+private boolean satisfazRestricoes(Map<String, String> perfil, List<Restricao> restricoes) {
+    if (restricoes.isEmpty()) {
+        return true; // Sem restricoes, todos veem
+    }
+    
+    for (Restricao r : restricoes) {
+        String valorPerfil = perfil.getOrDefault(r.getChave(), "");
+        
+        if (r.getTipo().equals("WHITELIST")) {
+            // WHITELIST: so permite se o perfil tem exatamente a chave=valor
+            if (!valorPerfil.equals(r.getValor())) {
+                return false;
+            }
+        } else if (r.getTipo().equals("BLACKLIST")) {
+            // BLACKLIST: bloqueia se o perfil tem a chave=valor
+            if (valorPerfil.equals(r.getValor())) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+// Metodo auxiliar para obter ID do anuncio pelo UUID
+private Long obterAnuncioIdPorUUID(String uuid) throws SQLException {
+    String sql = "SELECT id FROM anuncios WHERE id = ?";
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setString(1, uuid);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            return rs.getLong("id");
+        }
+        return null;
+    }
+}
+
+// Metodo auxiliar para formatar anuncio
+private String formatarAnuncioParaExibicao(Anuncio anuncio) {
+    return "[" + anuncio.getDataCriacao() + "] " +
+           "De: " + anuncio.getAutorEmail() + "\n" +
+           anuncio.getDescricao() + "\n" +
+           "Local: " + anuncio.getLocal();
+}
+
 }

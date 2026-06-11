@@ -355,4 +355,67 @@ public String[] listarLocaisPorUtilizador(String email) {
     public String registrarNoUDDI() {
         return "Registado no UDDI";
     }
+
+
+    @Override
+public String[] listarMeusLocais(String email) {
+    System.out.println("=== LISTAR MEUS LOCAIS ===");
+    System.out.println("Email: " + email);
+    
+    try {
+        // Buscar ID do utilizador pelo email
+        String sqlUser = "SELECT id FROM utilizadores WHERE email = ?";
+        Long userId = null;
+        
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sqlUser)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                userId = rs.getLong("id");
+                System.out.println("User ID encontrado: " + userId);
+            }
+        }
+        
+        if (userId == null) {
+            System.out.println("Utilizador nao encontrado: " + email);
+            return new String[0];
+        }
+        
+        // Buscar todos os locais criados pelo utilizador
+        String sql = "SELECT id, nome, tipo, latitude, longitude, raio, wifi_ssid " +
+                     "FROM locais WHERE criado_por = ? ORDER BY id DESC";
+        
+        List<String> locais = new ArrayList<>();
+        
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            
+            stmt.setLong(1, userId);
+            ResultSet rs = stmt.executeQuery();
+            
+            int count = 0;
+            while (rs.next()) {
+                count++;
+                System.out.println("Local #" + count + ": " + rs.getString("nome"));
+                
+                String data = rs.getInt("id") + "|" +
+                              rs.getString("nome") + "|" +
+                              rs.getString("tipo") + "|" +
+                              rs.getDouble("latitude") + "|" +
+                              rs.getDouble("longitude") + "|" +
+                              rs.getDouble("raio") + "|" +
+                              (rs.getString("wifi_ssid") != null ? rs.getString("wifi_ssid") : "");
+                locais.add(data);
+            }
+        }
+        
+        System.out.println("Total de locais encontrados: " + locais.size());
+        return locais.toArray(new String[0]);
+        
+    } catch (SQLException e) {
+        System.err.println("Erro ao listar meus locais: " + e.getMessage());
+        return new String[0];
+    }
+}
 }

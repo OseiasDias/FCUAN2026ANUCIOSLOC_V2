@@ -454,7 +454,17 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
-        final items = doc.findAllElements('return');
+
+        // CORREÇÃO: Busca o elemento <return> primeiro
+        final returnElement = doc.findAllElements('return').firstOrNull;
+
+        if (returnElement == null) {
+          print(" Elemento <return> não encontrado!");
+          return [];
+        }
+
+        // Depois busca todos os <item> dentro do <return>
+        final items = returnElement.findAllElements('item');
 
         List<Map<String, dynamic>> locais = [];
 
@@ -474,18 +484,19 @@ class ApiService {
           }
         }
 
-        print("Locais encontrados: ${locais.length}");
+        print(" Locais encontrados: ${locais.length}");
         for (var local in locais) {
           print(
-              " - ${local['nome']}: (${local['latitude']}, ${local['longitude']})");
+              "   - ${local['nome']}: (${local['latitude']}, ${local['longitude']})");
         }
 
         return locais;
       }
 
+      print(" Status code diferente de 200: ${response.statusCode}");
       return [];
     } catch (e) {
-      print("Erro ao listar locais coordenadas: $e");
+      print(" Erro ao listar locais coordenadas: $e");
       return [];
     }
   }
@@ -834,9 +845,9 @@ class ApiService {
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
     xmlns:ns="${Constantes.namespaceInfra}">
   <soap:Body>
-    <ns:listarLocaisPorUtilizador>
+    <ns:listarMeusLocais>
       <email>$email</email>
-    </ns:listarLocaisPorUtilizador>
+    </ns:listarMeusLocais>
   </soap:Body>
 </soap:Envelope>''';
 
@@ -847,68 +858,141 @@ class ApiService {
       final response = await http
           .post(
             Uri.parse(Constantes.urlInfra),
-            headers: {'Content-Type': 'text/xml'},
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+            },
             body: envelope,
           )
           .timeout(const Duration(seconds: Constantes.tempoEspera));
 
       print("Status: ${response.statusCode}");
-      print("Response body: ${response.body}");
+      print("Response: ${response.body}");
 
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
-
-        // Procurar por todos os elementos 'return'
-        final returns = doc.findAllElements('return');
-        print("Numero de elementos 'return' encontrados: ${returns.length}");
+        final items = doc.findAllElements('return');
 
         List<Map<String, dynamic>> locais = [];
 
-        for (var returnElem in returns) {
-          final texto = returnElem.innerText;
-          print("Conteudo do return: $texto");
+        for (var item in items) {
+          final texto = item.innerText;
+          final partes = texto.split('|');
 
-          // Pode ter multiplos locais em um unico return
-          if (texto.contains('\n') || texto.contains('|')) {
-            // Dividir por linha se houver multiplos
-            final linhas = texto.split(RegExp(r'[\n\r]+'));
-            for (var linha in linhas) {
-              final partes = linha.trim().split('|');
-              if (partes.length >= 6) {
-                locais.add({
-                  'id': int.tryParse(partes[0]) ?? 0,
-                  'nome': partes[1],
-                  'tipo': partes[2],
-                  'latitude': double.tryParse(partes[3]) ?? 0,
-                  'longitude': double.tryParse(partes[4]) ?? 0,
-                  'raio': double.tryParse(partes[5]) ?? 20,
-                  'wifiSsid': partes.length > 6 ? partes[6] : '',
-                });
-              }
-            }
-          } else {
-            // Um unico local
-            final partes = texto.split('|');
-            if (partes.length >= 6) {
-              locais.add({
-                'id': int.tryParse(partes[0]) ?? 0,
-                'nome': partes[1],
-                'tipo': partes[2],
-                'latitude': double.tryParse(partes[3]) ?? 0,
-                'longitude': double.tryParse(partes[4]) ?? 0,
-                'raio': double.tryParse(partes[5]) ?? 20,
-                'wifiSsid': partes.length > 6 ? partes[6] : '',
-              });
-            }
+          if (partes.length >= 6) {
+            locais.add({
+              'id': int.tryParse(partes[0]) ?? 0,
+              'nome': partes[1],
+              'tipo': partes[2],
+              'latitude': double.tryParse(partes[3]) ?? 0,
+              'longitude': double.tryParse(partes[4]) ?? 0,
+              'raio': double.tryParse(partes[5]) ?? 20,
+              'wifiSsid': partes.length > 6 ? partes[6] : '',
+            });
           }
         }
 
-        print("Total de locais parseados: ${locais.length}");
+        print("Locais encontrados: ${locais.length}");
         return locais;
       }
       return [];
     } catch (e) {
       print("Erro ao listar meus locais: $e");
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> obterInfoInfraestrutura() async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespaceInfra}">
+  <soap:Body>
+    <ns:obterInfoInfraestrutura/>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlInfra),
+            headers: {'Content-Type': 'text/xml'},
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final texto =
+            doc.findAllElements('return').firstOrNull?.innerText ?? '';
+
+        // Parse do texto: "Infraestrutura: Central\nCapacidade: 100\nConectados: 0\n..."
+        return {
+          'nome': _extrairValor(texto, 'Infraestrutura:'),
+          'capacidade':
+              int.tryParse(_extrairValor(texto, 'Capacidade:')) ?? 100,
+          'conectados': int.tryParse(_extrairValor(texto, 'Conectados:')) ?? 0,
+          'premio': double.tryParse(_extrairValor(texto, 'Prémio:')) ?? 2.0,
+        };
+      }
+      return {};
+    } catch (e) {
+      return {
+        'nome': 'Infraestrutura Central',
+        'capacidade': 100,
+        'conectados': 0,
+        'premio': 2.0
+      };
+    }
+  }
+
+  static String _extrairValor(String texto, String chave) {
+    final regex = RegExp('$chave\\s*(.*?)(?:\n|)');
+    final match = regex.firstMatch(texto);
+    return match?.group(1)?.trim() ?? '';
+  }
+
+  static Future<List<String>> receberAnunciosDeOutros({
+    required String email,
+    required String local,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:receberAnunciosDeOutros>
+      <email>$email</email>
+      <local>$local</local>
+    </ns:receberAnunciosDeOutros>
+  </soap:Body>
+</soap:Envelope>''';
+
+      print("=== RECEBER ANUNCIOS DE OUTROS ===");
+      print("URL: ${Constantes.urlApi}");
+      print("Email: $email");
+      print("Local: $local");
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+              'SOAPAction': '',
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      print("Status: ${response.statusCode}");
+      print("Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final items = doc.findAllElements('return');
+        return items.map((e) => e.innerText).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Erro ao receber anuncios de outros: $e");
       return [];
     }
   }

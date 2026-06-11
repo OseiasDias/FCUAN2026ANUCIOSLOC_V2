@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:xml/xml.dart';
 import '../services/api_service.dart';
 import '../utils/constantes.dart';
 import '../utils/preferencias.dart';
@@ -16,28 +18,56 @@ class _MeusLocaisScreenState extends State<MeusLocaisScreen> {
   bool _carregando = true;
   String _erro = '';
 
+  Map<String, dynamic> _infraestrutura = {};
+  bool _carregandoInfra = true;
+
   @override
   void initState() {
     super.initState();
-    _carregarLocais();
+    _carregarDados();
+  }
+
+  Future<void> _carregarDados() async {
+    await Future.wait([
+      _carregarLocais(),
+      _carregarInfraestrutura(),
+    ]);
   }
 
   Future<void> _carregarLocais() async {
-    setState(() {
-      _carregando = true;
-      _erro = '';
-    });
-
     try {
-      final locais = await ApiService.listarTodosLocais();
+      final email = await Preferencias.getEmail();
+      print("=== CARREGANDO MEUS LOCAIS ===");
+      print("Email: $email");
+
+      final locais = await ApiService.listarMeusLocais(email);
+
       setState(() {
         _locais = locais;
         _carregando = false;
       });
+
+      print("Locais carregados: ${locais.length}");
     } catch (e) {
+      print("Erro: $e");
       setState(() {
         _erro = 'Erro ao carregar locais: $e';
         _carregando = false;
+      });
+    }
+  }
+
+  Future<void> _carregarInfraestrutura() async {
+    try {
+      final infra = await ApiService.obterInfoInfraestrutura();
+      setState(() {
+        _infraestrutura = infra;
+        _carregandoInfra = false;
+      });
+    } catch (e) {
+      print("Erro ao carregar infraestrutura: $e");
+      setState(() {
+        _carregandoInfra = false;
       });
     }
   }
@@ -121,54 +151,200 @@ class _MeusLocaisScreenState extends State<MeusLocaisScreen> {
                 _carregarLocais();
               }
             },
+            tooltip: 'Adicionar Local',
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _carregarLocais,
+            onPressed: _carregarDados,
+            tooltip: 'Atualizar',
           ),
         ],
       ),
-      body: _carregando
-          ? const Center(child: CircularProgressIndicator())
-          : _erro.isNotEmpty
-              ? Center(
+      body: RefreshIndicator(
+        onRefresh: _carregarDados,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            children: [
+              _buildInfraCard(),
+              _carregando
+                  ? const Center(child: CircularProgressIndicator())
+                  : _erro.isNotEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline,
+                                  size: 64, color: Colors.red),
+                              const SizedBox(height: 16),
+                              Text(_erro),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: _carregarLocais,
+                                child: const Text('Tentar novamente'),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _locais.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.location_off,
+                                        size: 64, color: Colors.grey),
+                                    SizedBox(height: 16),
+                                    Text('Nenhum local cadastrado'),
+                                    SizedBox(height: 8),
+                                    Text('Toque no + para adicionar um local'),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _locais.length,
+                              itemBuilder: (context, index) {
+                                final local = _locais[index];
+                                return _buildLocalCard(local);
+                              },
+                            ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfraCard() {
+    if (_carregandoInfra) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Constantes.corPrincipal,
+            Constantes.corPrincipal.withAlpha(204),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Constantes.corPrincipal.withAlpha(77),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(51),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.cloud_queue,
+                      color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_erro),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _carregarLocais,
-                        child: const Text('Tentar novamente'),
+                      const Text(
+                        'Infraestrutura Atual',
+                        style: TextStyle(fontSize: 12, color: Colors.white70),
+                      ),
+                      Text(
+                        _infraestrutura['nome'] ?? 'Infraestrutura Central',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                   ),
-                )
-              : _locais.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.location_off,
-                              size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text('Nenhum local cadastrado'),
-                          SizedBox(height: 8),
-                          Text('Toque no + para adicionar um local'),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _locais.length,
-                      itemBuilder: (context, index) {
-                        final local = _locais[index];
-                        return _buildLocalCard(local);
-                      },
-                    ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _buildInfraStat(
+                  icon: Icons.people,
+                  label: 'Capacidade',
+                  value: '${_infraestrutura['capacidade'] ?? 100}',
+                ),
+                const SizedBox(width: 16),
+                _buildInfraStat(
+                  icon: Icons.trending_up,
+                  label: 'Conectados',
+                  value: '${_infraestrutura['conectados'] ?? 0}',
+                ),
+                const SizedBox(width: 16),
+                _buildInfraStat(
+                  icon: Icons.attach_money,
+                  label: 'Premio',
+                  value: '${_infraestrutura['premio'] ?? 2.0}',
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfraStat({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(38),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: Colors.white70),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 10, color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -176,9 +352,7 @@ class _MeusLocaisScreenState extends State<MeusLocaisScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () => _editarLocal(local),
         borderRadius: BorderRadius.circular(16),
@@ -187,7 +361,6 @@ class _MeusLocaisScreenState extends State<MeusLocaisScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Cabecalho com nome e tipo
               Row(
                 children: [
                   Container(
@@ -213,23 +386,18 @@ class _MeusLocaisScreenState extends State<MeusLocaisScreen> {
                         Text(
                           local['nome'],
                           style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                         Text(
                           local['tipo'] == 'GPS'
-                              ? 'Localização GPS'
+                              ? 'Localizacao GPS'
                               : 'Rede WiFi',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
                         ),
                       ],
                     ),
                   ),
-                  // Botoes de acao
                   Row(
                     children: [
                       IconButton(
@@ -249,19 +417,18 @@ class _MeusLocaisScreenState extends State<MeusLocaisScreen> {
               const SizedBox(height: 12),
               const Divider(),
               const SizedBox(height: 8),
-              // Detalhes do local
               if (local['tipo'] == 'GPS') ...[
                 Row(
                   children: [
                     const Icon(Icons.location_on, size: 16, color: Colors.grey),
                     const SizedBox(width: 4),
                     Text(
-                      'Latitude: ${local['latitude']?.toStringAsFixed(6)}',
+                      'Lat: ${local['latitude']?.toStringAsFixed(6)}',
                       style: const TextStyle(fontSize: 12),
                     ),
                     const SizedBox(width: 16),
                     Text(
-                      'Longitude: ${local['longitude']?.toStringAsFixed(6)}',
+                      'Lng: ${local['longitude']?.toStringAsFixed(6)}',
                       style: const TextStyle(fontSize: 12),
                     ),
                   ],
@@ -397,9 +564,8 @@ class _EditarLocalScreenState extends State<EditarLocalScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            // Tipo de localizacao
             const Text(
-              'Tipo de Localização',
+              'Tipo de Localizacao',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -416,8 +582,6 @@ class _EditarLocalScreenState extends State<EditarLocalScreen> {
               },
             ),
             const SizedBox(height: 24),
-
-            // Nome
             TextField(
               controller: _nomeController,
               decoration: const InputDecoration(
@@ -427,8 +591,6 @@ class _EditarLocalScreenState extends State<EditarLocalScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Raio
             TextField(
               controller: _raioController,
               decoration: const InputDecoration(
@@ -439,7 +601,6 @@ class _EditarLocalScreenState extends State<EditarLocalScreen> {
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 16),
-
             if (_tipoLocal == 'GPS') ...[
               TextField(
                 controller: _latitudeController,
@@ -470,9 +631,7 @@ class _EditarLocalScreenState extends State<EditarLocalScreen> {
                 ),
               ),
             ],
-
             const SizedBox(height: 32),
-
             ElevatedButton.icon(
               onPressed: _carregando ? null : _salvarEdicao,
               icon: _carregando
@@ -482,7 +641,7 @@ class _EditarLocalScreenState extends State<EditarLocalScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.save),
-              label: const Text('SALVAR ALTERAÇÕES'),
+              label: const Text('SALVAR ALTERACOES'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Constantes.corPrincipal,
                 foregroundColor: Colors.white,

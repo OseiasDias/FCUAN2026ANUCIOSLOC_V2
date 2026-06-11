@@ -149,4 +149,7 @@ public interface AnunciosLocService {
         @WebMethod
         String[] listarRestricoes(@WebParam(name = "anuncioId") String anuncioId);
 
+        @WebMethod
+        String[] receberAnunciosDeOutros(@WebParam(name = "email") String email,
+                        @WebParam(name = "local") String local);
 }

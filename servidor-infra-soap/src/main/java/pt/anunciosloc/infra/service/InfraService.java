@@ -83,4 +83,7 @@ public interface InfraService {
 
     @WebMethod
     String ping();
+
+    @WebMethod
+String[] listarMeusLocais(@WebParam(name = "email") String email);
 }
