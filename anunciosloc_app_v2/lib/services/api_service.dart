@@ -455,28 +455,48 @@ class ApiService {
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
 
-        // CORREÇÃO: Busca o elemento <return> primeiro
         final returnElement = doc.findAllElements('return').firstOrNull;
 
         if (returnElement == null) {
-          print(" Elemento <return> não encontrado!");
+          print("Elemento return nao encontrado");
           return [];
         }
 
-        // Depois busca todos os <item> dentro do <return>
         final items = returnElement.findAllElements('item');
-
         List<Map<String, dynamic>> locais = [];
 
         for (var item in items) {
           final texto = item.innerText;
           print("Texto do local: $texto");
 
-          // Formato: "Nome|-8.838333|13.234444|100"
           final partes = texto.split('|');
-          if (partes.length >= 4) {
+
+          // Verifica se e GPS ou WIFI baseado no numero de partes
+          if (partes.length >= 6 && partes[1] == 'GPS') {
+            // Formato GPS: Nome|GPS|latitude|longitude|raio|infraestrutura
             locais.add({
               'nome': partes[0],
+              'tipo': partes[1],
+              'latitude': double.tryParse(partes[2]) ?? 0,
+              'longitude': double.tryParse(partes[3]) ?? 0,
+              'raio': double.tryParse(partes[4]) ?? 0,
+              'infraestrutura':
+                  partes.length > 5 ? partes[5] : 'Sem infraestrutura',
+            });
+          } else if (partes.length >= 4 && partes[1] == 'WIFI') {
+            // Formato WIFI: Nome|WIFI|wifi_ssid|infraestrutura
+            locais.add({
+              'nome': partes[0],
+              'tipo': partes[1],
+              'wifiSsid': partes[2],
+              'infraestrutura':
+                  partes.length > 3 ? partes[3] : 'Sem infraestrutura',
+            });
+          } else if (partes.length >= 4) {
+            // Formato antigo (compatibilidade): Nome|latitude|longitude|capacidade
+            locais.add({
+              'nome': partes[0],
+              'tipo': 'GPS',
               'latitude': double.tryParse(partes[1]) ?? 0,
               'longitude': double.tryParse(partes[2]) ?? 0,
               'capacidade': int.tryParse(partes[3]) ?? 0,
@@ -484,19 +504,24 @@ class ApiService {
           }
         }
 
-        print(" Locais encontrados: ${locais.length}");
+        print("Locais encontrados: ${locais.length}");
         for (var local in locais) {
-          print(
-              "   - ${local['nome']}: (${local['latitude']}, ${local['longitude']})");
+          if (local['tipo'] == 'GPS') {
+            print(
+                "   - ${local['nome']}: GPS (${local['latitude']}, ${local['longitude']}) - ${local['infraestrutura']}");
+          } else {
+            print(
+                "   - ${local['nome']}: WIFI (${local['wifiSsid']}) - ${local['infraestrutura']}");
+          }
         }
 
         return locais;
       }
 
-      print(" Status code diferente de 200: ${response.statusCode}");
+      print("Status code: ${response.statusCode}");
       return [];
     } catch (e) {
-      print(" Erro ao listar locais coordenadas: $e");
+      print("Erro ao listar locais coordenadas: $e");
       return [];
     }
   }

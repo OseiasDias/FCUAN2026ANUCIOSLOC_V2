@@ -30,12 +30,13 @@ class _LocaisScreenState extends State<LocaisScreen> {
     });
 
     try {
-      //final email = await Preferencias.getEmail();
       final locais = await ApiService.listarLocaisCoordenadas();
       setState(() {
         _locais = locais;
         _carregando = false;
       });
+      
+      print("Locais carregados: ${locais.length}");
     } catch (e) {
       setState(() {
         _erro = 'Erro ao carregar locais: $e';
@@ -52,7 +53,6 @@ class _LocaisScreenState extends State<LocaisScreen> {
         backgroundColor: Constantes.corPrincipal,
         foregroundColor: Colors.white,
         actions: [
-          // Botao para gerir os meus locais
           IconButton(
             icon: const Icon(Icons.list_alt),
             onPressed: () {
@@ -135,6 +135,8 @@ class _LocaisScreenState extends State<LocaisScreen> {
                         itemCount: _locais.length,
                         itemBuilder: (context, index) {
                           final local = _locais[index];
+                          final isGPS = local['tipo'] == 'GPS';
+                          
                           return Card(
                             margin: const EdgeInsets.all(8),
                             elevation: 2,
@@ -143,59 +145,187 @@ class _LocaisScreenState extends State<LocaisScreen> {
                             ),
                             child: ExpansionTile(
                               leading: CircleAvatar(
-                                backgroundColor: Constantes.corPrincipal,
-                                child: const Icon(Icons.location_city,
-                                    color: Colors.white),
+                                backgroundColor: isGPS ? Colors.blue : Colors.orange,
+                                child: Icon(
+                                  isGPS ? Icons.gps_fixed : Icons.wifi,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
                               title: Text(
                                 local['nome'],
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
-                                'Capacidade: ${local['capacidade']} utilizadores',
+                                isGPS ? 'Localizacao GPS' : 'Rede WiFi',
+                                style: TextStyle(color: isGPS ? Colors.blue : Colors.orange),
                               ),
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      const Text('Coordenadas:',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                      const SizedBox(height: 8),
+                                      // TIPO DE LOCAL
                                       Container(
-                                        padding: const EdgeInsets.all(12),
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey[100],
-                                          borderRadius:
-                                              BorderRadius.circular(8),
+                                          color: isGPS ? Colors.blue.shade50 : Colors.orange.shade50,
+                                          borderRadius: BorderRadius.circular(20),
                                         ),
                                         child: Row(
+                                          mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            const Icon(Icons.location_on,
-                                                color: Colors.red),
+                                            Icon(
+                                              isGPS ? Icons.gps_fixed : Icons.wifi,
+                                              size: 16,
+                                              color: isGPS ? Colors.blue : Colors.orange,
+                                            ),
                                             const SizedBox(width: 8),
                                             Text(
-                                              'Latitude: ${local['latitude']}\nLongitude: ${local['longitude']}',
+                                              isGPS ? 'Tipo: GPS' : 'Tipo: WiFi',
+                                              style: TextStyle(
+                                                color: isGPS ? Colors.blue : Colors.orange,
+                                                fontWeight: FontWeight.w500,
+                                                fontSize: 12,
+                                              ),
                                             ),
                                           ],
                                         ),
                                       ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.people,
-                                              size: 16,
-                                              color: Colors.grey[600]),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '${local['capacidade']} utilizadores simultâneos',
+                                      const SizedBox(height: 16),
+                                      
+                                      // COORDENADAS (apenas para GPS)
+                                      if (isGPS) ...[
+                                        const Text(
+                                          'Coordenadas Geograficas',
+                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(8),
                                           ),
-                                        ],
+                                          child: Column(
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.location_on, size: 16, color: Colors.red),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Latitude: ${local['latitude']?.toStringAsFixed(6)}',
+                                                    style: const TextStyle(fontSize: 13),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.location_on, size: 16, color: Colors.green),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Longitude: ${local['longitude']?.toStringAsFixed(6)}',
+                                                    style: const TextStyle(fontSize: 13),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        
+                                        // RAIO
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade50,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.radio_button_checked, size: 16, color: Colors.blue),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'Raio de cobertura: ${local['raio']?.toStringAsFixed(0)} metros',
+                                                  style: const TextStyle(fontSize: 13),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                      
+                                      // DADOS PARA WIFI
+                                      if (!isGPS && local['wifiSsid'] != null) ...[
+                                        Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.shade50,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.wifi, size: 16, color: Colors.orange),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  'SSID: ${local['wifiSsid']}',
+                                                  style: const TextStyle(fontSize: 13),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      
+                                      // INFRAESTRUTURA
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.purple.shade50,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.cloud_queue, size: 16, color: Colors.purple),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                'Infraestrutura: ${local['infraestrutura'] ?? 'Sem infraestrutura'}',
+                                                style: const TextStyle(fontSize: 13),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                      
+                                      const SizedBox(height: 8),
+                                      
+                                      // CRIADOR (se disponivel)
+                                      if (local['criadorEmail'] != null) ...[
+                                        const SizedBox(height: 8),
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.person, size: 14, color: Colors.grey),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Criado por: ${local['criadorEmail']}',
+                                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
