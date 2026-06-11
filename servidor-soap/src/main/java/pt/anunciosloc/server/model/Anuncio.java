@@ -23,23 +23,26 @@ public class Anuncio implements Serializable {
     private boolean activo;
     private double custoAnuncio;
     
+    // Construtor padrao
     public Anuncio() {
         this.id = UUID.randomUUID().toString();
         this.dataCriacao = LocalDateTime.now();
-        this.dataExpiracao = this.dataCriacao.plusDays(30);
+        this.dataExpiracao = LocalDateTime.now().plusDays(30);
         this.totalVisualizacoes = 0;
         this.activo = true;
         this.custoAnuncio = 5.0;
     }
     
+    // Construtor para compatibilidade com codigo antigo
     public Anuncio(String conteudo, String autorEmail, String local) {
         this();
-        this.titulo = conteudo.length() > 150 ? conteudo.substring(0, 150) : conteudo;
+        this.titulo = "Anuncio em " + local;
         this.descricao = conteudo;
         this.autorEmail = autorEmail;
         this.local = local;
     }
     
+    // Construtor completo
     public Anuncio(String titulo, String descricao, String autorEmail, String local) {
         this();
         this.titulo = titulo;
@@ -48,11 +51,13 @@ public class Anuncio implements Serializable {
         this.local = local;
     }
     
+    // Construtor com data de expiracao personalizada
     public Anuncio(String titulo, String descricao, String autorEmail, String local, LocalDateTime dataExpiracao) {
         this(titulo, descricao, autorEmail, local);
         this.dataExpiracao = dataExpiracao;
     }
     
+    // Getters e Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     
@@ -61,17 +66,6 @@ public class Anuncio implements Serializable {
     
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
-    
-    // Metodos para compatibilidade com codigo antigo
-    public String getConteudo() { return descricao; }
-    public void setConteudo(String conteudo) { 
-        this.descricao = conteudo;
-        if (conteudo != null && conteudo.length() > 150) {
-            this.titulo = conteudo.substring(0, 150);
-        } else if (conteudo != null) {
-            this.titulo = conteudo;
-        }
-    }
     
     public LocalDateTime getDataCriacao() { return dataCriacao; }
     public void setDataCriacao(LocalDateTime dataCriacao) { this.dataCriacao = dataCriacao; }
@@ -88,16 +82,26 @@ public class Anuncio implements Serializable {
     public int getTotalVisualizacoes() { return totalVisualizacoes; }
     public void setTotalVisualizacoes(int totalVisualizacoes) { this.totalVisualizacoes = totalVisualizacoes; }
     
-    // Metodo para compatibilidade
-    public int getTotalEntregas() { return totalVisualizacoes; }
-    public void setTotalEntregas(int totalEntregas) { this.totalVisualizacoes = totalEntregas; }
-    
     public boolean isActivo() { return activo; }
     public void setActivo(boolean activo) { this.activo = activo; }
     
     public double getCustoAnuncio() { return custoAnuncio; }
     public void setCustoAnuncio(double custoAnuncio) { this.custoAnuncio = custoAnuncio; }
     
+    // Metodo para compatibilidade com codigo antigo
+    public String getConteudo() { return descricao; }
+    public void setConteudo(String conteudo) { 
+        this.descricao = conteudo;
+        if (this.titulo == null && conteudo != null) {
+            this.titulo = conteudo.length() > 100 ? conteudo.substring(0, 100) : conteudo;
+        }
+    }
+    
+    // Metodo para compatibilidade
+    public int getTotalEntregas() { return totalVisualizacoes; }
+    public void setTotalEntregas(int totalEntregas) { this.totalVisualizacoes = totalEntregas; }
+    
+    // Metodos de utilidade
     public boolean isExpirado() {
         return LocalDateTime.now().isAfter(dataExpiracao);
     }
@@ -106,8 +110,12 @@ public class Anuncio implements Serializable {
         this.totalVisualizacoes++;
     }
     
-    // Metodo para compatibilidade
     public void incrementarEntregas() {
         this.totalVisualizacoes++;
+    }
+    
+    @Override
+    public String toString() {
+        return "[" + dataCriacao + "] " + titulo + ": " + descricao + " (" + local + ")";
     }
 }

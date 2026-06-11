@@ -651,29 +651,45 @@ class ApiService {
 
   static Future<String> obterUltimoAnuncioId(String email) async {
     try {
-      final body = '<email>$email</email>';
-      final envelope = _buildEnvelope('listarAnunciosPorUtilizador', body);
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:listarAnunciosPorUtilizador>
+      <email>$email</email>
+    </ns:listarAnunciosPorUtilizador>
+  </soap:Body>
+</soap:Envelope>''';
 
-      final response = await http.post(
-        Uri.parse(Constantes.urlApi),
-        headers: {'Content-Type': 'text/xml'},
-        body: envelope,
-      );
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {'Content-Type': 'text/xml'},
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
 
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
-        final items = doc.findAllElements('item');
-        if (items.isNotEmpty) {
-          final primeiroItem = items.first.innerText;
-          final regex = RegExp(r'ID:\s*([a-f0-9-]+)', caseSensitive: false);
-          final match = regex.firstMatch(primeiroItem);
-          if (match != null) {
-            return match.group(1)!;
+        final returnElement = doc.findAllElements('return').firstOrNull;
+
+        if (returnElement != null) {
+          final items = returnElement.findAllElements('item');
+          if (items.isNotEmpty) {
+            // Tentar extrair o ID do ultimo anuncio
+            final ultimoItem = items.last;
+            final idTexto = ultimoItem.innerText;
+
+            // Extrair ID do formato: "[2024-01-01] Titulo (Local)"
+            // Ou se o servidor retornar apenas o ID
+            print("Ultimo anuncio: $idTexto");
+            return idTexto;
           }
         }
       }
       return '';
     } catch (e) {
+      print("Erro ao obter ultimo anuncio ID: $e");
       return '';
     }
   }
@@ -1019,6 +1035,57 @@ class ApiService {
     } catch (e) {
       print("Erro ao receber anuncios de outros: $e");
       return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> publicarAnuncioCompleto({
+    required String email,
+    required String titulo,
+    required String descricao,
+    required String local,
+    required int diasValidade,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:postarMensagemCompleta>
+      <email>$email</email>
+      <titulo>$titulo</titulo>
+      <descricao>$descricao</descricao>
+      <local>$local</local>
+      <diasValidade>$diasValidade</diasValidade>
+    </ns:postarMensagemCompleta>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {'Content-Type': 'text/xml'},
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final returnElement = doc.findAllElements('return').firstOrNull;
+
+        if (returnElement != null) {
+          final texto = returnElement.innerText;
+          final regex = RegExp(r'ID:\s*([a-f0-9-]+)');
+          final match = regex.firstMatch(texto);
+          return {
+            'sucesso': true,
+            'id': match?.group(1),
+            'mensagem': texto,
+          };
+        }
+      }
+      return {'sucesso': false, 'id': null, 'mensagem': 'Erro ao publicar'};
+    } catch (e) {
+      return {'sucesso': false, 'id': null, 'mensagem': 'Erro: $e'};
     }
   }
 }

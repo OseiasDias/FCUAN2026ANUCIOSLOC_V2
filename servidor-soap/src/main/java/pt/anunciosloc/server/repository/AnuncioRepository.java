@@ -12,29 +12,7 @@ import java.util.Map;
 
 public class AnuncioRepository {
 
-    public void salvar(Anuncio anuncio) throws SQLException {
-        String sql = "INSERT INTO anuncios (id, titulo, descricao, utilizador_id, local_id, data_criacao, data_expiracao, total_visualizacoes, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, anuncio.getId());
-            stmt.setString(2, anuncio.getTitulo());
-            stmt.setString(3, anuncio.getDescricao());
-            stmt.setLong(4, obterUtilizadorId(anuncio.getAutorEmail(), conn));
-            stmt.setLong(5, obterLocalId(anuncio.getLocal(), conn));
-            stmt.setTimestamp(6, Timestamp.valueOf(anuncio.getDataCriacao()));
-            stmt.setTimestamp(7, Timestamp.valueOf(anuncio.getDataExpiracao()));
-            stmt.setInt(8, anuncio.getTotalVisualizacoes());
-            stmt.setBoolean(9, anuncio.isActivo());
-
-            stmt.executeUpdate();
-
-            atualizarEstatisticasUtilizador(anuncio.getAutorEmail(), conn);
-            atualizarEstatisticasInfraestrutura(anuncio.getLocal(), conn);
-        }
-    }
-
+   
     public Anuncio buscarPorId(String id) throws SQLException {
         String sql = "SELECT a.*, u.email as autor_email, l.nome as local_nome FROM anuncios a " +
                 "JOIN utilizadores u ON a.utilizador_id = u.id " +
@@ -506,4 +484,25 @@ public class AnuncioRepository {
             stmt.executeUpdate();
         }
     }
+
+    public void salvar(Anuncio anuncio) throws SQLException {
+    String sql = "INSERT INTO anuncios (id, titulo, descricao, utilizador_id, local_id, data_criacao, data_expiracao, total_visualizacoes, activo) "
+               + "VALUES (?, ?, ?, (SELECT id FROM utilizadores WHERE email = ?), (SELECT id FROM locais WHERE nome = ?), ?, ?, ?, ?)";
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        
+        stmt.setString(1, anuncio.getId());
+        stmt.setString(2, anuncio.getTitulo());
+        stmt.setString(3, anuncio.getDescricao());
+        stmt.setString(4, anuncio.getAutorEmail());
+        stmt.setString(5, anuncio.getLocal());
+        stmt.setTimestamp(6, Timestamp.valueOf(anuncio.getDataCriacao()));
+        stmt.setTimestamp(7, Timestamp.valueOf(anuncio.getDataExpiracao()));
+        stmt.setInt(8, anuncio.getTotalVisualizacoes());
+        stmt.setBoolean(9, anuncio.isActivo());
+        
+        stmt.executeUpdate();
+    }
+}
 }

@@ -152,4 +152,11 @@ public interface AnunciosLocService {
         @WebMethod
         String[] receberAnunciosDeOutros(@WebParam(name = "email") String email,
                         @WebParam(name = "local") String local);
+
+        @WebMethod
+String postarMensagemCompleta(@WebParam(name = "email") String email,
+                              @WebParam(name = "titulo") String titulo,
+                              @WebParam(name = "descricao") String descricao,
+                              @WebParam(name = "local") String local,
+                              @WebParam(name = "diasValidade") int diasValidade);
 }

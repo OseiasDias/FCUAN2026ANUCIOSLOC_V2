@@ -366,52 +366,53 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
     }
 
     @Override
-public String[] listarLocaisCoordenadas() {
-    try {
-        String sql = "SELECT l.id, l.nome, l.tipo, l.latitude, l.longitude, l.raio, l.wifi_ssid, " +
-                     "i.nome as nome_infraestrutura " +
-                     "FROM locais l " +
-                     "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id";
-        
-        List<String> result = new ArrayList<>();
-        
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            
-            while (rs.next()) {
-                String nomeLocal = rs.getString("nome");
-                String tipo = rs.getString("tipo");
-                double latitude = rs.getDouble("latitude");
-                double longitude = rs.getDouble("longitude");
-                double raio = rs.getDouble("raio");
-                String wifiSsid = rs.getString("wifi_ssid");
-                String nomeInfraestrutura = rs.getString("nome_infraestrutura");
-                
-                String data;
-                if ("GPS".equals(tipo)) {
-                    data = nomeLocal + "|" +
-                           tipo + "|" +
-                           latitude + "|" +
-                           longitude + "|" +
-                           raio + "|" +
-                           (nomeInfraestrutura != null ? nomeInfraestrutura : "Sem infraestrutura");
-                } else {
-                    data = nomeLocal + "|" +
-                           tipo + "|" +
-                           (wifiSsid != null ? wifiSsid : "N/A") + "|" +
-                           (nomeInfraestrutura != null ? nomeInfraestrutura : "Sem infraestrutura");
+    public String[] listarLocaisCoordenadas() {
+        try {
+            String sql = "SELECT l.id, l.nome, l.tipo, l.latitude, l.longitude, l.raio, l.wifi_ssid, " +
+                    "i.nome as nome_infraestrutura " +
+                    "FROM locais l " +
+                    "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id";
+
+            List<String> result = new ArrayList<>();
+
+            try (Connection conn = ConnectionFactory.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    ResultSet rs = stmt.executeQuery()) {
+
+                while (rs.next()) {
+                    String nomeLocal = rs.getString("nome");
+                    String tipo = rs.getString("tipo");
+                    double latitude = rs.getDouble("latitude");
+                    double longitude = rs.getDouble("longitude");
+                    double raio = rs.getDouble("raio");
+                    String wifiSsid = rs.getString("wifi_ssid");
+                    String nomeInfraestrutura = rs.getString("nome_infraestrutura");
+
+                    String data;
+                    if ("GPS".equals(tipo)) {
+                        data = nomeLocal + "|" +
+                                tipo + "|" +
+                                latitude + "|" +
+                                longitude + "|" +
+                                raio + "|" +
+                                (nomeInfraestrutura != null ? nomeInfraestrutura : "Sem infraestrutura");
+                    } else {
+                        data = nomeLocal + "|" +
+                                tipo + "|" +
+                                (wifiSsid != null ? wifiSsid : "N/A") + "|" +
+                                (nomeInfraestrutura != null ? nomeInfraestrutura : "Sem infraestrutura");
+                    }
+                    result.add(data);
                 }
-                result.add(data);
             }
+
+            return result.toArray(new String[0]);
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar locais coordenadas: " + e.getMessage());
+            return new String[0];
         }
-        
-        return result.toArray(new String[0]);
-    } catch (SQLException e) {
-        System.err.println("Erro ao listar locais coordenadas: " + e.getMessage());
-        return new String[0];
     }
-}
+
     @Override
     public String salvarPreferencia(String email, String chave, String valor) {
         try {
@@ -476,160 +477,255 @@ public String[] listarLocaisCoordenadas() {
             return "Erro ao remover preferencia: " + e.getMessage();
         }
     }
-  @Override
-public String adicionarRestricao(String anuncioId, String tipo, String chave, String valor) {
-    try {
-        Long id = Long.parseLong(anuncioId);
-        Restricao restricao = new Restricao(id, tipo, chave, valor);
-        RestricaoRepository repo = new RestricaoRepository();
-        repo.salvarRestricao(restricao);
-        return "Restricao adicionada com sucesso";
-    } catch (SQLException e) {
-        return "Erro ao adicionar restricao: " + e.getMessage();
+
+    @Override
+    public String adicionarRestricao(String anuncioId, String tipo, String chave, String valor) {
+        // VALIDACAO: Verificar se anuncioId e valido
+        if (anuncioId == null || anuncioId.trim().isEmpty()) {
+            return "Erro: ID do anuncio nao pode ser vazio";
+        }
+
+        try {
+            Long id = Long.parseLong(anuncioId);
+            Restricao restricao = new Restricao(id, tipo, chave, valor);
+            RestricaoRepository repo = new RestricaoRepository();
+            repo.salvarRestricao(restricao);
+            return "Restricao adicionada com sucesso";
+        } catch (NumberFormatException e) {
+            return "Erro: ID do anuncio invalido: " + anuncioId;
+        } catch (SQLException e) {
+            return "Erro ao adicionar restricao: " + e.getMessage();
+        }
     }
-}
 
-@Override
-public String[] listarRestricoes(String anuncioId) {
-    try {
-        Long id = Long.parseLong(anuncioId);
-        RestricaoRepository repo = new RestricaoRepository();
-        List<Restricao> restricoes = repo.listarPorAnuncio(id);
-        
-        return restricoes.stream()
-            .map(r -> r.getTipo() + "|" + r.getChave() + "|" + r.getValor())
-            .toArray(String[]::new);
-    } catch (SQLException e) {
-        return new String[0];
+    @Override
+    public String[] listarRestricoes(String anuncioId) {
+        try {
+            Long id = Long.parseLong(anuncioId);
+            RestricaoRepository repo = new RestricaoRepository();
+            List<Restricao> restricoes = repo.listarPorAnuncio(id);
+
+            return restricoes.stream()
+                    .map(r -> r.getTipo() + "|" + r.getChave() + "|" + r.getValor())
+                    .toArray(String[]::new);
+        } catch (SQLException e) {
+            return new String[0];
+        }
     }
-}
 
+    @Override
+    public String[] receberAnunciosDeOutros(String email, String local) {
+        System.out.println("=== RECEBER ANUNCIOS DE OUTROS ===");
+        System.out.println("Email: " + email);
+        System.out.println("Local: " + local);
 
-@Override
-public String[] receberAnunciosDeOutros(String email, String local) {
-    System.out.println("=== RECEBER ANUNCIOS DE OUTROS ===");
-    System.out.println("Email: " + email);
-    System.out.println("Local: " + local);
-    
+        try {
+            // 1. Verificar se o utilizador existe
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo()) {
+                return new String[] { "Utilizador nao encontrado: " + email };
+            }
+
+            // 2. Buscar perfil do utilizador (para filtrar por restricoes)
+            Map<String, String> perfil = obterPerfilUtilizadorMap(email);
+            System.out.println("Perfil do utilizador: " + perfil);
+
+            // 3. Buscar todos os anuncios ativos do local
+            List<Anuncio> todosAnuncios = anuncioRepo.buscarPorLocalAtivo(local);
+            System.out.println("Total de anuncios no local: " + todosAnuncios.size());
+
+            // 4. Filtrar anuncios (excluir proprios, aplicar restricoes)
+            List<String> anunciosVisiveis = new ArrayList<>();
+            RestricaoRepository restricaoRepo = new RestricaoRepository();
+
+            for (Anuncio anuncio : todosAnuncios) {
+                // Nao mostrar os proprios anuncios
+                if (anuncio.getAutorEmail().equals(email)) {
+                    System.out.println("Ignorando anuncio proprio: " + anuncio.getAutorEmail());
+                    continue;
+                }
+
+                // Verificar se o anuncio ainda esta ativo
+                if (!anuncio.isActivo()) {
+                    System.out.println("Anuncio inativo: " + anuncio.getId());
+                    continue;
+                }
+
+                // Verificar se o anuncio nao expirou
+                if (anuncio.isExpirado()) {
+                    System.out.println("Anuncio expirado: " + anuncio.getId());
+                    continue;
+                }
+
+                // Buscar ID do anuncio no banco
+                Long anuncioId = obterAnuncioIdPorUUID(anuncio.getId());
+
+                // Buscar restricoes do anuncio
+                List<Restricao> restricoes = restricaoRepo.listarPorAnuncio(anuncioId);
+
+                // Verificar se o utilizador satisfaz as restricoes
+                if (satisfazRestricoes(perfil, restricoes)) {
+                    String mensagem = formatarAnuncioParaExibicao(anuncio);
+                    anunciosVisiveis.add(mensagem);
+
+                    // Registrar visualizacao
+                    anuncioRepo.incrementarVisualizacao(anuncio.getId());
+                    System.out.println("Anuncio visivel para o utilizador: " + anuncio.getId());
+                } else {
+                    System.out.println("Anuncio bloqueado por restricoes: " + anuncio.getId());
+                }
+            }
+
+            System.out.println("Total de anuncios visiveis: " + anunciosVisiveis.size());
+            return anunciosVisiveis.toArray(new String[0]);
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao receber anuncios: " + e.getMessage());
+            return new String[] { "Erro: " + e.getMessage() };
+        }
+    }
+
+    // Metodo auxiliar para obter perfil do utilizador
+    private Map<String, String> obterPerfilUtilizadorMap(String email) throws SQLException {
+        Utilizador u = utilizadorRepo.buscarPorEmail(email);
+        if (u == null)
+            return new HashMap<>();
+
+        PerfilUtilizadorRepository perfilRepo = new PerfilUtilizadorRepository();
+        return perfilRepo.obterPerfil(u.getId());
+    }
+
+    // Metodo auxiliar para verificar restricoes
+    private boolean satisfazRestricoes(Map<String, String> perfil, List<Restricao> restricoes) {
+        if (restricoes.isEmpty()) {
+            return true; // Sem restricoes, todos veem
+        }
+
+        for (Restricao r : restricoes) {
+            String valorPerfil = perfil.getOrDefault(r.getChave(), "");
+
+            if (r.getTipo().equals("WHITELIST")) {
+                // WHITELIST: so permite se o perfil tem exatamente a chave=valor
+                if (!valorPerfil.equals(r.getValor())) {
+                    return false;
+                }
+            } else if (r.getTipo().equals("BLACKLIST")) {
+                // BLACKLIST: bloqueia se o perfil tem a chave=valor
+                if (valorPerfil.equals(r.getValor())) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    // Metodo auxiliar para obter ID do anuncio pelo UUID
+    private Long obterAnuncioIdPorUUID(String uuid) throws SQLException {
+        String sql = "SELECT id FROM anuncios WHERE id = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, uuid);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+            return null;
+        }
+    }
+
+    // Metodo auxiliar para formatar anuncio
+    private String formatarAnuncioParaExibicao(Anuncio anuncio) {
+        return "[" + anuncio.getDataCriacao() + "] " +
+                "De: " + anuncio.getAutorEmail() + "\n" +
+                anuncio.getDescricao() + "\n" +
+                "Local: " + anuncio.getLocal();
+    }
+
+    @Override
+public String postarMensagemCompleta(String email, String titulo, String descricao, String local, int diasValidade) {
     try {
-        // 1. Verificar se o utilizador existe
+        // 1. Validar utilizador
         Utilizador u = utilizadorRepo.buscarPorEmail(email);
         if (u == null || !u.isAtivo()) {
-            return new String[]{"Utilizador nao encontrado: " + email};
+            return "Erro: Utilizador nao encontrado ou conta desativada: " + email;
         }
         
-        // 2. Buscar perfil do utilizador (para filtrar por restricoes)
-        Map<String, String> perfil = obterPerfilUtilizadorMap(email);
-        System.out.println("Perfil do utilizador: " + perfil);
-        
-        // 3. Buscar todos os anuncios ativos do local
-        List<Anuncio> todosAnuncios = anuncioRepo.buscarPorLocalAtivo(local);
-        System.out.println("Total de anuncios no local: " + todosAnuncios.size());
-        
-        // 4. Filtrar anuncios (excluir proprios, aplicar restricoes)
-        List<String> anunciosVisiveis = new ArrayList<>();
-        RestricaoRepository restricaoRepo = new RestricaoRepository();
-        
-        for (Anuncio anuncio : todosAnuncios) {
-            // Nao mostrar os proprios anuncios
-            if (anuncio.getAutorEmail().equals(email)) {
-                System.out.println("Ignorando anuncio proprio: " + anuncio.getAutorEmail());
-                continue;
-            }
-            
-            // Verificar se o anuncio ainda esta ativo
-            if (!anuncio.isActivo()) {
-                System.out.println("Anuncio inativo: " + anuncio.getId());
-                continue;
-            }
-            
-            // Verificar se o anuncio nao expirou
-            if (anuncio.isExpirado()) {
-                System.out.println("Anuncio expirado: " + anuncio.getId());
-                continue;
-            }
-            
-            // Buscar ID do anuncio no banco
-            Long anuncioId = obterAnuncioIdPorUUID(anuncio.getId());
-            
-            // Buscar restricoes do anuncio
-            List<Restricao> restricoes = restricaoRepo.listarPorAnuncio(anuncioId);
-            
-            // Verificar se o utilizador satisfaz as restricoes
-            if (satisfazRestricoes(perfil, restricoes)) {
-                String mensagem = formatarAnuncioParaExibicao(anuncio);
-                anunciosVisiveis.add(mensagem);
-                
-                // Registrar visualizacao
-                anuncioRepo.incrementarVisualizacao(anuncio.getId());
-                System.out.println("Anuncio visivel para o utilizador: " + anuncio.getId());
-            } else {
-                System.out.println("Anuncio bloqueado por restricoes: " + anuncio.getId());
-            }
+        // 2. Validar titulo
+        if (titulo == null || titulo.trim().isEmpty()) {
+            return "Erro: Titulo do anuncio e obrigatorio!";
+        }
+        if (titulo.length() > 100) {
+            return "Erro: Titulo excede 100 caracteres!";
         }
         
-        System.out.println("Total de anuncios visiveis: " + anunciosVisiveis.size());
-        return anunciosVisiveis.toArray(new String[0]);
+        // 3. Validar descricao
+        if (descricao == null || descricao.trim().isEmpty()) {
+            return "Erro: Descricao do anuncio e obrigatoria!";
+        }
+        if (descricao.length() > 1000) {
+            return "Erro: Descricao excede 1000 caracteres!";
+        }
+        
+        // 4. Validar local
+        if (local == null || local.trim().isEmpty()) {
+            return "Erro: Local do anuncio e obrigatorio!";
+        }
+        
+        // 5. Validar dias de validade
+        if (diasValidade < 1 || diasValidade > 365) {
+            return "Erro: Dias de validade invalido! (1 a 365)";
+        }
+        
+        // 6. Verificar saldo (custa 5 pontos)
+        if (u.getSaldo() < 5.0) {
+            return "Erro: Saldo insuficiente! Necessario 5 pontos para publicar. Seu saldo: " + (int) u.getSaldo();
+        }
+        
+        // 7. Verificar tempo desde o ultimo anuncio (minimo 5 minutos)
+        if (!u.podePublicarAnuncio()) {
+            return "Erro: Aguarde 5 minutos para publicar outro anuncio.";
+        }
+        
+        // 8. Verificar se o local existe
+        Infraestrutura infra = infraRepo.buscarPorNome(local);
+        if (infra == null) {
+            return "Erro: Local '" + local + "' nao encontrado!";
+        }
+        
+        // 9. Debitar saldo
+        boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
+        if (!debitado) {
+            return "Erro: Falha ao debitar saldo.";
+        }
+        
+        // 10. Criar e salvar anuncio
+        Anuncio anuncio = new Anuncio(titulo, descricao, email, local);
+        anuncio.setDataExpiracao(java.time.LocalDateTime.now().plusDays(diasValidade));
+        anuncio.setTotalVisualizacoes(0);
+        anuncio.setActivo(true);
+        
+        anuncioRepo.salvar(anuncio);
+        
+        // 11. Atualizar estatisticas do utilizador
+        utilizadorRepo.atualizarUltimoAnuncio(email, java.time.LocalDateTime.now());
+        utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1, u.getTotalVisualizacoesRecebidas());
+        
+        // 12. Atualizar quorum
+        quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
+        
+        // 13. Atualizar estatisticas da infraestrutura
+        infra.setTotalAnuncios(infra.getTotalAnuncios() + 1);
+        //infraRepo.atualizar(infra);
+        
+        return "Anuncio publicado com sucesso! ID: " + anuncio.getId() + 
+               "\nTitulo: " + titulo +
+               "\nLocal: " + local +
+               "\nValidade: " + diasValidade + " dias" +
+               "\nSaldo restante: " + (int) (u.getSaldo() - 5.0);
         
     } catch (SQLException e) {
-        System.err.println("Erro ao receber anuncios: " + e.getMessage());
-        return new String[]{"Erro: " + e.getMessage()};
+        return "Erro ao publicar anuncio: " + e.getMessage();
     }
-}
-
-// Metodo auxiliar para obter perfil do utilizador
-private Map<String, String> obterPerfilUtilizadorMap(String email) throws SQLException {
-    Utilizador u = utilizadorRepo.buscarPorEmail(email);
-    if (u == null) return new HashMap<>();
-    
-    PerfilUtilizadorRepository perfilRepo = new PerfilUtilizadorRepository();
-    return perfilRepo.obterPerfil(u.getId());
-}
-
-// Metodo auxiliar para verificar restricoes
-private boolean satisfazRestricoes(Map<String, String> perfil, List<Restricao> restricoes) {
-    if (restricoes.isEmpty()) {
-        return true; // Sem restricoes, todos veem
-    }
-    
-    for (Restricao r : restricoes) {
-        String valorPerfil = perfil.getOrDefault(r.getChave(), "");
-        
-        if (r.getTipo().equals("WHITELIST")) {
-            // WHITELIST: so permite se o perfil tem exatamente a chave=valor
-            if (!valorPerfil.equals(r.getValor())) {
-                return false;
-            }
-        } else if (r.getTipo().equals("BLACKLIST")) {
-            // BLACKLIST: bloqueia se o perfil tem a chave=valor
-            if (valorPerfil.equals(r.getValor())) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-// Metodo auxiliar para obter ID do anuncio pelo UUID
-private Long obterAnuncioIdPorUUID(String uuid) throws SQLException {
-    String sql = "SELECT id FROM anuncios WHERE id = ?";
-    try (Connection conn = ConnectionFactory.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-        stmt.setString(1, uuid);
-        ResultSet rs = stmt.executeQuery();
-        if (rs.next()) {
-            return rs.getLong("id");
-        }
-        return null;
-    }
-}
-
-// Metodo auxiliar para formatar anuncio
-private String formatarAnuncioParaExibicao(Anuncio anuncio) {
-    return "[" + anuncio.getDataCriacao() + "] " +
-           "De: " + anuncio.getAutorEmail() + "\n" +
-           anuncio.getDescricao() + "\n" +
-           "Local: " + anuncio.getLocal();
 }
 
 }
