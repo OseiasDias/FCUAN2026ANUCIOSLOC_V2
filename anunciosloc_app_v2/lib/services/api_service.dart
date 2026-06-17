@@ -134,7 +134,6 @@ class ApiService {
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
 
-        // Procurar accessToken
         final accessToken =
             doc.findAllElements('accessToken').firstOrNull?.innerText;
 
@@ -156,7 +155,6 @@ class ApiService {
           };
         }
 
-        // Fallback para ticketId (modo legado)
         final ticketId = doc.findAllElements('ticketId').firstOrNull?.innerText;
         if (ticketId != null && ticketId.isNotEmpty) {
           final saldo = await consultarSaldo(email);
@@ -195,6 +193,7 @@ class ApiService {
 
   // ==================== ANUNCIOS ====================
 
+  // Método antigo (compatibilidade) - aceita apenas conteudo
   static Future<bool> publicarAnuncio({
     required String email,
     required String conteudo,
@@ -208,6 +207,150 @@ class ApiService {
     final envelope = _buildEnvelope('postarMensagem', body);
     final result = await _postRequest(Constantes.urlApi, envelope);
     return result['sucesso'] == true;
+  }
+
+  // Método completo - com titulo, descricao e validade
+  static Future<Map<String, dynamic>> publicarAnuncioCompleto({
+    required String email,
+    required String titulo,
+    required String descricao,
+    required String local,
+    required int diasValidade,
+  }) async {
+    try {
+      // 1. Primeiro, consultar o saldo do utilizador
+      final saldoAtual = await consultarSaldo(email);
+      print("Saldo atual: $saldoAtual");
+
+      // 2. Verificar se o saldo é suficiente (custa 5 pontos)
+      if (saldoAtual < 5) {
+        return {
+          'sucesso': false,
+          'id': null,
+          'mensagem':
+              'Saldo insuficiente! Você tem $saldoAtual pontos. Necessário 5 pontos para publicar um anúncio.',
+          'saldoRestante': saldoAtual,
+          'codigo': 'SALDO_INSUFICIENTE'
+        };
+      }
+
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:postarMensagemCompleta>
+      <email>$email</email>
+      <titulo>$titulo</titulo>
+      <descricao>$descricao</descricao>
+      <local>$local</local>
+      <diasValidade>$diasValidade</diasValidade>
+    </ns:postarMensagemCompleta>
+  </soap:Body>
+</soap:Envelope>''';
+
+      print("=== PUBLICAR ANUNCIO COMPLETO ===");
+      print("Email: $email");
+      print("Titulo: $titulo");
+      print("Local: $local");
+      print("Dias de validade: $diasValidade");
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {
+              'Content-Type': 'text/xml; charset=utf-8',
+              'SOAPAction': _soapAction,
+            },
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      print("Status: ${response.statusCode}");
+      print("Response: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final returnElement = doc.findAllElements('return').firstOrNull;
+
+        if (returnElement != null) {
+          final texto = returnElement.innerText;
+
+          // Verificar se a resposta contém erro de saldo
+          if (texto.contains('Saldo insuficiente')) {
+            // Extrair o saldo da mensagem de erro
+            final regexSaldo = RegExp(r'(\d+) pontos');
+            final matchSaldo = regexSaldo.firstMatch(texto);
+            final saldoAtualizado = matchSaldo != null
+                ? int.tryParse(matchSaldo.group(1) ?? '0')
+                : saldoAtual;
+
+            return {
+              'sucesso': false,
+              'id': null,
+              'mensagem': texto,
+              'saldoRestante': saldoAtualizado ?? saldoAtual,
+              'codigo': 'SALDO_INSUFICIENTE'
+            };
+          }
+
+          // Tentar extrair o ID do anúncio da mensagem de retorno
+          final regexId = RegExp(r'ID:\s*([a-f0-9-]+)');
+          final matchId = regexId.firstMatch(texto);
+
+          // Tentar extrair o saldo restante
+          final regexSaldo = RegExp(r'Saldo restante:\s*(\d+)');
+          final matchSaldo = regexSaldo.firstMatch(texto);
+
+          return {
+            'sucesso': true,
+            'id': matchId?.group(1),
+            'mensagem': texto,
+            'saldoRestante': matchSaldo != null
+                ? int.tryParse(matchSaldo.group(1) ?? '0')
+                : null,
+            'codigo': 'SUCESSO'
+          };
+        }
+        return {
+          'sucesso': false,
+          'id': null,
+          'mensagem': 'Erro ao publicar anúncio',
+          'codigo': 'ERRO_DESCONHECIDO'
+        };
+      }
+      return {
+        'sucesso': false,
+        'id': null,
+        'mensagem': 'HTTP ${response.statusCode}',
+        'codigo': 'ERRO_HTTP'
+      };
+    } catch (e) {
+      print("Erro ao publicar anuncio: $e");
+      return {
+        'sucesso': false,
+        'id': null,
+        'mensagem': 'Erro: $e',
+        'codigo': 'ERRO_EXCECAO'
+      };
+    }
+  }
+
+  // Método de conveniencia para publicar com titulo e descricao (retorna bool)
+  static Future<bool> publicarAnuncioComTitulo({
+    required String email,
+    required String titulo,
+    required String descricao,
+    required String local,
+    int diasValidade = 30,
+  }) async {
+    final resultado = await publicarAnuncioCompleto(
+      email: email,
+      titulo: titulo,
+      descricao: descricao,
+      local: local,
+      diasValidade: diasValidade,
+    );
+    return resultado['sucesso'] == true;
   }
 
   static Future<List<String>> receberAnuncios({
@@ -230,28 +373,6 @@ class ApiService {
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
         return doc.findAllElements('return').map((e) => e.innerText).toList();
-      }
-      return [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  static Future<List<AnuncioModel>> listarMeusAnuncios(String email) async {
-    try {
-      final body = '<email>$email</email>';
-      final envelope = _buildEnvelope('listarAnunciosPorUtilizador', body);
-
-      final response = await http.post(
-        Uri.parse(Constantes.urlApi),
-        headers: {'Content-Type': 'text/xml'},
-        body: envelope,
-      );
-
-      if (response.statusCode == 200) {
-        final doc = XmlDocument.parse(response.body);
-        final items = doc.findAllElements('item');
-        return items.map((e) => AnuncioModel.fromSoap(e.innerText)).toList();
       }
       return [];
     } catch (e) {
@@ -306,17 +427,14 @@ class ApiService {
 
         List<Map<String, dynamic>> infraestruturas = [];
 
-        // Procurar por elementos 'return' que contem os dados
         final returns = doc.findAllElements('return');
 
         for (var returnElem in returns) {
-          // Tentar extrair dados de diferentes formatos
           String nome = '';
           double latitude = 0;
           double longitude = 0;
           int capacidade = 0;
 
-          // Formato 1: Elementos filhos diretos
           try {
             final nomeElem = returnElem.findElements('nome').firstOrNull;
             if (nomeElem != null) nome = nomeElem.innerText;
@@ -336,12 +454,10 @@ class ApiService {
             print("Erro ao extrair dados no formato 1: $e");
           }
 
-          // Formato 2: Se nao encontrou, tentar extrair do texto
           if (nome.isEmpty) {
             final texto = returnElem.innerText;
             print("Texto do return: $texto");
 
-            // Tentar extrair nome, latitude, longitude do texto
             final regexNome =
                 RegExp(r'nome[=:]\s*([^,]+)', caseSensitive: false);
             final regexLat =
@@ -377,7 +493,6 @@ class ApiService {
           }
         }
 
-        // Se ainda nao encontrou, usar dados do banco diretamente via consulta alternativa
         if (infraestruturas.isEmpty) {
           print("Tentando metodo alternativo...");
           infraestruturas = await _listarInfraestruturasAlternativo();
@@ -392,7 +507,6 @@ class ApiService {
         return infraestruturas;
       }
 
-      // Se falhou, tentar metodo alternativo
       return await _listarInfraestruturasAlternativo();
     } catch (e) {
       print("Erro ao listar infraestruturas: $e");
@@ -402,7 +516,6 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>>
       _listarInfraestruturasAlternativo() async {
-    // Dados das infraestruturas do banco de dados
     return [
       {
         'nome': 'Infraestrutura Central',
@@ -471,9 +584,7 @@ class ApiService {
 
           final partes = texto.split('|');
 
-          // Verifica se e GPS ou WIFI baseado no numero de partes
           if (partes.length >= 6 && partes[1] == 'GPS') {
-            // Formato GPS: Nome|GPS|latitude|longitude|raio|infraestrutura
             locais.add({
               'nome': partes[0],
               'tipo': partes[1],
@@ -484,7 +595,6 @@ class ApiService {
                   partes.length > 5 ? partes[5] : 'Sem infraestrutura',
             });
           } else if (partes.length >= 4 && partes[1] == 'WIFI') {
-            // Formato WIFI: Nome|WIFI|wifi_ssid|infraestrutura
             locais.add({
               'nome': partes[0],
               'tipo': partes[1],
@@ -493,7 +603,6 @@ class ApiService {
                   partes.length > 3 ? partes[3] : 'Sem infraestrutura',
             });
           } else if (partes.length >= 4) {
-            // Formato antigo (compatibilidade): Nome|latitude|longitude|capacidade
             locais.add({
               'nome': partes[0],
               'tipo': 'GPS',
@@ -676,12 +785,8 @@ class ApiService {
         if (returnElement != null) {
           final items = returnElement.findAllElements('item');
           if (items.isNotEmpty) {
-            // Tentar extrair o ID do ultimo anuncio
             final ultimoItem = items.last;
             final idTexto = ultimoItem.innerText;
-
-            // Extrair ID do formato: "[2024-01-01] Titulo (Local)"
-            // Ou se o servidor retornar apenas o ID
             print("Ultimo anuncio: $idTexto");
             return idTexto;
           }
@@ -965,7 +1070,6 @@ class ApiService {
         final texto =
             doc.findAllElements('return').firstOrNull?.innerText ?? '';
 
-        // Parse do texto: "Infraestrutura: Central\nCapacidade: 100\nConectados: 0\n..."
         return {
           'nome': _extrairValor(texto, 'Infraestrutura:'),
           'capacidade':
@@ -1038,27 +1142,10 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> publicarAnuncioCompleto({
-    required String email,
-    required String titulo,
-    required String descricao,
-    required String local,
-    required int diasValidade,
-  }) async {
+  static Future<List<AnuncioModel>> listarMeusAnuncios(String email) async {
     try {
-      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
-    xmlns:ns="${Constantes.namespace}">
-  <soap:Body>
-    <ns:postarMensagemCompleta>
-      <email>$email</email>
-      <titulo>$titulo</titulo>
-      <descricao>$descricao</descricao>
-      <local>$local</local>
-      <diasValidade>$diasValidade</diasValidade>
-    </ns:postarMensagemCompleta>
-  </soap:Body>
-</soap:Envelope>''';
+      final body = '<email>$email</email>';
+      final envelope = _buildEnvelope('listarAnunciosPorUtilizador', body);
 
       final response = await http
           .post(
@@ -1068,24 +1155,28 @@ class ApiService {
           )
           .timeout(const Duration(seconds: Constantes.tempoEspera));
 
+      print("=== LISTAR MEUS ANUNCIOS ===");
+      print("Status: ${response.statusCode}");
+      print("Response: ${response.body}");
+
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
-        final returnElement = doc.findAllElements('return').firstOrNull;
+        final items = doc.findAllElements('return');
 
-        if (returnElement != null) {
-          final texto = returnElement.innerText;
-          final regex = RegExp(r'ID:\s*([a-f0-9-]+)');
-          final match = regex.firstMatch(texto);
-          return {
-            'sucesso': true,
-            'id': match?.group(1),
-            'mensagem': texto,
-          };
+        List<AnuncioModel> anuncios = [];
+        for (var item in items) {
+          final texto = item.innerText;
+          final anuncio = AnuncioModel.fromSoap(texto);
+          anuncios.add(anuncio);
         }
+
+        print("Anuncios encontrados: ${anuncios.length}");
+        return anuncios;
       }
-      return {'sucesso': false, 'id': null, 'mensagem': 'Erro ao publicar'};
+      return [];
     } catch (e) {
-      return {'sucesso': false, 'id': null, 'mensagem': 'Erro: $e'};
+      print("Erro ao listar meus anuncios: $e");
+      return [];
     }
   }
 }

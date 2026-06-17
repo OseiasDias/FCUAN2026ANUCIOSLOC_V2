@@ -154,9 +154,12 @@ public interface AnunciosLocService {
                         @WebParam(name = "local") String local);
 
         @WebMethod
-String postarMensagemCompleta(@WebParam(name = "email") String email,
-                              @WebParam(name = "titulo") String titulo,
-                              @WebParam(name = "descricao") String descricao,
-                              @WebParam(name = "local") String local,
-                              @WebParam(name = "diasValidade") int diasValidade);
+        String[] listarAnunciosCompletosPorUtilizador(@WebParam(name = "email") String email);
+
+        @WebMethod
+        String postarMensagemCompleta(@WebParam(name = "email") String email,
+                        @WebParam(name = "titulo") String titulo,
+                        @WebParam(name = "descricao") String descricao,
+                        @WebParam(name = "local") String local,
+                        @WebParam(name = "diasValidade") int diasValidade);
 }

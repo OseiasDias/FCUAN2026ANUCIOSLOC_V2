@@ -27,6 +27,15 @@ class _CadastroScreenState extends State<CadastroScreen> {
   bool _confirmarSenhaVisivel = false;
   bool _aceitouTermos = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    _confirmarSenhaController.dispose();
+    _nomeController.dispose();
+    super.dispose();
+  }
+
   void _mostrarMensagem(String msg, {bool isErro = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -39,44 +48,67 @@ class _CadastroScreenState extends State<CadastroScreen> {
   }
 
   Future<void> _cadastrar() async {
-    if (!_formChave.currentState!.validate()) return;
-
-    if (_senhaController.text != _confirmarSenhaController.text) {
-      _mostrarMensagem('As senhas não coincidem!', isErro: true);
+    // Validar formulario
+    if (!_formChave.currentState!.validate()) {
       return;
     }
 
+    // Validar senhas
+    if (_senhaController.text != _confirmarSenhaController.text) {
+      _mostrarMensagem('As senhas nao coincidem!', isErro: true);
+      return;
+    }
+
+    // Validar senha (minimo 4 caracteres)
+    if (_senhaController.text.length < 4) {
+      _mostrarMensagem('A senha deve ter pelo menos 4 caracteres!',
+          isErro: true);
+      return;
+    }
+
+    // Validar termos
     if (!_aceitouTermos) {
-      _mostrarMensagem('Você deve aceitar os termos de uso!', isErro: true);
+      _mostrarMensagem('Voce deve aceitar os termos de uso!', isErro: true);
       return;
     }
 
     setState(() => _carregando = true);
 
     try {
+      final email = _emailController.text.trim();
+      final senha = _senhaController.text;
+      final nome = _nomeController.text.trim();
+
+      print("=== TENTANDO CADASTRAR ===");
+      print("Email: $email");
+      print("Nome: $nome");
+
       final resultado = await ApiService.cadastrarUsuario(
-        email: _emailController.text.trim(),
-        senha: _senhaController.text,
-        nome: _nomeController.text.trim(),
+        email: email,
+        senha: senha,
+        nome: nome,
       );
+
+      print("Resultado cadastro: $resultado");
 
       if (mounted) {
         if (resultado['sucesso'] == true) {
           _mostrarMensagem(Constantes.sucessoCadastro);
 
-          // Login automatico com o novo metodo
+          // Login automatico
           final loginResultado = await ApiService.login(
-            email: _emailController.text.trim(),
-            senha: _senhaController.text,
+            email: email,
+            senha: senha,
           );
 
-          print("Login resultado: $loginResultado");
+          print("Resultado login: $loginResultado");
 
           if (loginResultado['sucesso'] == true && mounted) {
+            // Salvar dados do usuario
             await Preferencias.salvarUsuario(
-              email: _emailController.text.trim(),
+              email: email,
               ticketId: loginResultado['ticketId'] ?? '',
-              nome: _nomeController.text.trim(),
+              nome: nome,
               accessToken: loginResultado['accessToken'],
               refreshToken: loginResultado['refreshToken'],
             );
@@ -88,24 +120,30 @@ class _CadastroScreenState extends State<CadastroScreen> {
               );
             }
           } else if (mounted) {
+            // Se login falhar, vai para tela de login
+            _mostrarMensagem(
+              'Conta criada! Faca login para continuar.',
+              isErro: false,
+            );
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const LoginScreen()),
             );
           }
         } else {
+          // Erro no cadastro
+          final mensagemErro = resultado['mensagem'] ?? 'Erro ao criar conta';
+          _mostrarMensagem(mensagemErro, isErro: true);
           setState(() => _carregando = false);
-          _mostrarMensagem(
-            resultado['mensagem'] ?? 'Erro ao cadastrar',
-            isErro: true,
-          );
         }
       }
     } catch (e) {
       print("=== ERRO NO CADASTRO ===");
       print(e);
-      setState(() => _carregando = false);
-      _mostrarMensagem('Erro inesperado: $e', isErro: true);
+      if (mounted) {
+        setState(() => _carregando = false);
+        _mostrarMensagem('Erro inesperado: $e', isErro: true);
+      }
     }
   }
 
@@ -128,7 +166,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     end: Alignment.bottomRight,
                     colors: [
                       Constantes.corPrincipal,
-                      Constantes.corPrincipal.withOpacity(0.7),
+                      Constantes.corPrincipal.withAlpha(179),
                     ],
                   ),
                   borderRadius: const BorderRadius.only(
@@ -141,7 +179,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withAlpha(51),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -162,10 +200,10 @@ class _CadastroScreenState extends State<CadastroScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Preencha os dados para começar',
+                      'Preencha os dados para comecar',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white.withAlpha(230),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -209,8 +247,10 @@ class _CadastroScreenState extends State<CadastroScreen> {
                           if (valor == null || valor.isEmpty) {
                             return 'Digite seu e-mail';
                           }
-                          if (!valor.contains('@') || !valor.contains('.')) {
-                            return 'E-mail inválido';
+                          final emailRegex =
+                              RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!emailRegex.hasMatch(valor)) {
+                            return 'E-mail invalido';
                           }
                           return null;
                         },
@@ -221,7 +261,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                       CampoTexto(
                         controlador: _senhaController,
                         rotulo: 'Senha',
-                        hint: 'Mínimo 4 caracteres',
+                        hint: 'Minimo 4 caracteres',
                         icone: Icons.lock_outline,
                         ehSenha: true,
                         senhaVisivel: _senhaVisivel,
@@ -256,6 +296,9 @@ class _CadastroScreenState extends State<CadastroScreen> {
                           if (valor == null || valor.isEmpty) {
                             return 'Confirme sua senha';
                           }
+                          if (valor != _senhaController.text) {
+                            return 'As senhas nao coincidem';
+                          }
                           return null;
                         },
                       ),
@@ -264,6 +307,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
 
                       // Termos de uso
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Checkbox(
                             value: _aceitouTermos,
@@ -295,7 +339,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                                     ),
                                     const TextSpan(text: ' e a '),
                                     TextSpan(
-                                      text: 'Política de Privacidade',
+                                      text: 'Politica de Privacidade',
                                       style: TextStyle(
                                         color: Constantes.corPrincipal,
                                         fontWeight: FontWeight.bold,
@@ -345,7 +389,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Já tem conta?',
+                            'Ja tem conta?',
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                           TextButton(

@@ -110,15 +110,29 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
   }
 
   Future<void> _publicar() async {
-    if (!_formChave.currentState!.validate()) return;
+    if (!_formChave.currentState!.validate()) {
+      return;
+    }
 
     if (_localSelecionado == null) {
       _mostrarMensagem('Selecione um local', isErro: true);
       return;
     }
 
-    if (_tituloController.text.length > 100) {
-      _mostrarMensagem('O titulo excede 100 caracteres', isErro: true);
+    // Validar titulo
+    if (_tituloController.text.trim().isEmpty) {
+      _mostrarMensagem('Digite o titulo do anuncio', isErro: true);
+      return;
+    }
+
+    if (_tituloController.text.length > 150) {
+      _mostrarMensagem('O titulo excede 150 caracteres', isErro: true);
+      return;
+    }
+
+    // Validar descricao
+    if (_descricaoController.text.trim().isEmpty) {
+      _mostrarMensagem('Digite a descricao do anuncio', isErro: true);
       return;
     }
 
@@ -127,42 +141,79 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
       return;
     }
 
+    // Validar dias de validade
+    if (_diasValidade < 1 || _diasValidade > 365) {
+      _mostrarMensagem('Dias de validade invalido (1 a 365)', isErro: true);
+      return;
+    }
+
     setState(() => _carregando = true);
 
-    final email = await Preferencias.getEmail();
+    try {
+      final email = await Preferencias.getEmail();
 
-    final resultado = await ApiService.publicarAnuncioCompleto(
-      email: email,
-      titulo: _tituloController.text,
-      descricao: _descricaoController.text,
-      local: _localSelecionado!,
-      diasValidade: _diasValidade,
-    );
-
-    if (resultado['sucesso'] && mounted) {
-      final anuncioId = resultado['id'];
-
-      if (_restricoes.isNotEmpty && anuncioId != null) {
-        for (var restricao in _restricoes) {
-          await ApiService.adicionarRestricao(
-            anuncioId: anuncioId,
-            tipo: restricao['tipo']!,
-            chave: restricao['chave']!,
-            valor: restricao['valor']!,
-          );
-        }
+      if (email.isEmpty) {
+        _mostrarMensagem('Utilizador nao autenticado', isErro: true);
+        setState(() => _carregando = false);
+        return;
       }
 
+      print("=== PUBLICANDO ANUNCIO ===");
+      print("Email: $email");
+      print("Titulo: ${_tituloController.text}");
+      print("Descricao: ${_descricaoController.text}");
+      print("Local: $_localSelecionado");
+      print("Dias validade: $_diasValidade");
+
+      final resultado = await ApiService.publicarAnuncioCompleto(
+        email: email,
+        titulo: _tituloController.text.trim(),
+        descricao: _descricaoController.text.trim(),
+        local: _localSelecionado!,
+        diasValidade: _diasValidade,
+      );
+
+      print("Resultado: $resultado");
+
+      if (resultado['sucesso'] == true && mounted) {
+        final anuncioId = resultado['id'];
+
+        // Adicionar restricoes se existirem
+        if (_restricoes.isNotEmpty &&
+            anuncioId != null &&
+            anuncioId.isNotEmpty) {
+          print("Adicionando ${_restricoes.length} restricoes...");
+          for (var restricao in _restricoes) {
+            await ApiService.adicionarRestricao(
+              anuncioId: anuncioId,
+              tipo: restricao['tipo']!,
+              chave: restricao['chave']!,
+              valor: restricao['valor']!,
+            );
+          }
+        }
+
+        setState(() => _carregando = false);
+        _mostrarMensagem('Anuncio publicado com sucesso!');
+        _tituloController.clear();
+        _descricaoController.clear();
+        setState(() => _restricoes.clear());
+
+        // Aguardar um momento antes de voltar
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.pop(context, true);
+        }
+      } else if (mounted) {
+        setState(() => _carregando = false);
+        final mensagemErro =
+            resultado['mensagem'] ?? 'Erro ao publicar anuncio';
+        _mostrarMensagem(mensagemErro, isErro: true);
+      }
+    } catch (e) {
+      print("Erro ao publicar: $e");
       setState(() => _carregando = false);
-      _mostrarMensagem('Anuncio publicado com sucesso!');
-      _tituloController.clear();
-      _descricaoController.clear();
-      setState(() => _restricoes.clear());
-      Navigator.pop(context);
-    } else if (mounted) {
-      setState(() => _carregando = false);
-      _mostrarMensagem(resultado['mensagem'] ?? 'Erro ao publicar anuncio',
-          isErro: true);
+      _mostrarMensagem('Erro: $e', isErro: true);
     }
   }
 
@@ -270,18 +321,34 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
               CampoTexto(
                 controlador: _tituloController,
                 rotulo: 'Titulo',
-                hint: 'Digite o titulo do anuncio',
+                hint: 'Digite o titulo do anuncio (max 150 caracteres)',
                 icone: Icons.title,
                 validador: (valor) {
-                  if (valor == null || valor.isEmpty) {
+                  if (valor == null || valor.trim().isEmpty) {
                     return 'Digite o titulo do anuncio';
                   }
-                  if (valor.length > 100) {
-                    return 'Titulo excede 100 caracteres';
+                  if (valor.length > 150) {
+                    return 'Titulo excede 150 caracteres';
                   }
                   return null;
                 },
               ),
+              const SizedBox(height: 8),
+
+              // Contador de titulo
+              Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '${_tituloController.text.length}/150 caracteres',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _tituloController.text.length > 150
+                        ? Colors.red
+                        : Colors.grey,
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 16),
 
               // Descricao
@@ -290,9 +357,8 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
                 rotulo: 'Descricao',
                 hint: 'Digite a descricao do anuncio...',
                 icone: Icons.description,
-                //maxLinhas: 5,
                 validador: (valor) {
-                  if (valor == null || valor.isEmpty) {
+                  if (valor == null || valor.trim().isEmpty) {
                     return 'Digite a descricao do anuncio';
                   }
                   if (valor.length > 1000) {

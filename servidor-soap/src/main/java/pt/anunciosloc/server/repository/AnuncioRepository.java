@@ -12,7 +12,34 @@ import java.util.Map;
 
 public class AnuncioRepository {
 
-   
+    // ==================== SALVAR ====================
+
+    public void salvar(Anuncio anuncio) throws SQLException {
+        Long utilizadorId = obterUtilizadorId(anuncio.getAutorEmail());
+        Long localId = obterLocalId(anuncio.getLocal());
+
+        String sql = "INSERT INTO anuncios (id, titulo, descricao, utilizador_id, local_id, data_criacao, data_expiracao, total_visualizacoes, activo) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, anuncio.getId());
+            stmt.setString(2, anuncio.getTitulo());
+            stmt.setString(3, anuncio.getDescricao());
+            stmt.setLong(4, utilizadorId);
+            stmt.setLong(5, localId);
+            stmt.setTimestamp(6, Timestamp.valueOf(anuncio.getDataCriacao()));
+            stmt.setTimestamp(7, Timestamp.valueOf(anuncio.getDataExpiracao()));
+            stmt.setInt(8, anuncio.getTotalVisualizacoes());
+            stmt.setBoolean(9, anuncio.isActivo());
+
+            stmt.executeUpdate();
+        }
+    }
+
+    // ==================== BUSCAR ====================
+
     public Anuncio buscarPorId(String id) throws SQLException {
         String sql = "SELECT a.*, u.email as autor_email, l.nome as local_nome FROM anuncios a " +
                 "JOIN utilizadores u ON a.utilizador_id = u.id " +
@@ -26,24 +53,7 @@ public class AnuncioRepository {
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                Anuncio a = new Anuncio();
-                a.setId(rs.getString("id"));
-                a.setTitulo(rs.getString("titulo"));
-                a.setDescricao(rs.getString("descricao"));
-                a.setAutorEmail(rs.getString("autor_email"));
-                a.setLocal(rs.getString("local_nome"));
-                a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
-                a.setActivo(rs.getBoolean("activo"));
-
-                Timestamp ts = rs.getTimestamp("data_criacao");
-                if (ts != null)
-                    a.setDataCriacao(ts.toLocalDateTime());
-
-                ts = rs.getTimestamp("data_expiracao");
-                if (ts != null)
-                    a.setDataExpiracao(ts.toLocalDateTime());
-
-                return a;
+                return mapearAnuncio(rs);
             }
             return null;
         }
@@ -67,7 +77,8 @@ public class AnuncioRepository {
             while (rs.next()) {
                 Anuncio a = new Anuncio();
                 a.setId(rs.getString("id"));
-                a.setConteudo(rs.getString("descricao"));
+                a.setTitulo(rs.getString("titulo"));
+                a.setDescricao(rs.getString("descricao"));
                 a.setAutorEmail(rs.getString("autor_email"));
                 a.setLocal(localNome);
                 a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
@@ -87,43 +98,47 @@ public class AnuncioRepository {
         return lista;
     }
 
-    public List<Anuncio> buscarPorAutor(String email) throws SQLException {
-        String sql = "SELECT a.*, l.nome as local_nome FROM anuncios a " +
-                "JOIN utilizadores u ON a.utilizador_id = u.id " +
-                "JOIN locais l ON a.local_id = l.id " +
-                "WHERE u.email = ? ORDER BY a.data_criacao DESC";
+   public List<Anuncio> buscarPorAutor(String email) throws SQLException {
+    String sql = "SELECT a.id, a.titulo, a.descricao, a.data_criacao, a.data_expiracao, " +
+                 "a.total_visualizacoes, a.activo, " +
+                 "u.email as autor_email, " +
+                 "l.nome as local_nome " +
+                 "FROM anuncios a " +
+                 "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                 "JOIN locais l ON a.local_id = l.id " +
+                 "WHERE u.email = ? " +
+                 "ORDER BY a.data_criacao DESC";
 
-        List<Anuncio> lista = new ArrayList<>();
+    List<Anuncio> lista = new ArrayList<>();
 
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, email);
-            ResultSet rs = stmt.executeQuery();
+        stmt.setString(1, email);
+        ResultSet rs = stmt.executeQuery();
 
-            while (rs.next()) {
-                Anuncio a = new Anuncio();
-                a.setId(rs.getString("id"));
-                a.setTitulo(rs.getString("titulo"));
-                a.setDescricao(rs.getString("descricao"));
-                a.setAutorEmail(email);
-                a.setLocal(rs.getString("local_nome"));
-                a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
-                a.setActivo(rs.getBoolean("activo"));
+        while (rs.next()) {
+            Anuncio a = new Anuncio();
+            a.setId(rs.getString("id"));
+            a.setTitulo(rs.getString("titulo"));
+            a.setDescricao(rs.getString("descricao"));
+            a.setAutorEmail(rs.getString("autor_email"));
+            a.setLocal(rs.getString("local_nome"));
+            a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
+            a.setActivo(rs.getBoolean("activo"));
 
-                Timestamp ts = rs.getTimestamp("data_criacao");
-                if (ts != null)
-                    a.setDataCriacao(ts.toLocalDateTime());
+            Timestamp ts = rs.getTimestamp("data_criacao");
+            if (ts != null) a.setDataCriacao(ts.toLocalDateTime());
 
-                ts = rs.getTimestamp("data_expiracao");
-                if (ts != null)
-                    a.setDataExpiracao(ts.toLocalDateTime());
+            ts = rs.getTimestamp("data_expiracao");
+            if (ts != null) a.setDataExpiracao(ts.toLocalDateTime());
 
-                lista.add(a);
-            }
+            lista.add(a);
         }
-        return lista;
     }
+    return lista;
+}
+
 
     public List<Anuncio> listarTodos() throws SQLException {
         String sql = "SELECT a.*, u.email as autor_email, l.nome as local_nome FROM anuncios a " +
@@ -138,24 +153,7 @@ public class AnuncioRepository {
                 ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                Anuncio a = new Anuncio();
-                a.setId(rs.getString("id"));
-                a.setTitulo(rs.getString("titulo"));
-                a.setDescricao(rs.getString("descricao"));
-                a.setAutorEmail(rs.getString("autor_email"));
-                a.setLocal(rs.getString("local_nome"));
-                a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
-                a.setActivo(rs.getBoolean("activo"));
-
-                Timestamp ts = rs.getTimestamp("data_criacao");
-                if (ts != null)
-                    a.setDataCriacao(ts.toLocalDateTime());
-
-                ts = rs.getTimestamp("data_expiracao");
-                if (ts != null)
-                    a.setDataExpiracao(ts.toLocalDateTime());
-
-                lista.add(a);
+                lista.add(mapearAnuncio(rs));
             }
         }
         return lista;
@@ -194,13 +192,18 @@ public class AnuncioRepository {
         return lista;
     }
 
+    public List<Anuncio> buscarPorLocalAtivo(String local) throws SQLException {
+        return buscarAtivosPorLocal(local);
+    }
+
+    // ==================== ATUALIZAR ====================
+
     public void registrarVisualizacao(String anuncioId, String emailVisualizador) throws SQLException {
         Connection conn = null;
         try {
             conn = ConnectionFactory.getConnection();
             conn.setAutoCommit(false);
 
-            // 1. Inserir na tabela de visualizacoes
             String sqlInsert = "INSERT INTO visualizacoes_anuncio (anuncio_id, utilizador_id) " +
                     "VALUES ((SELECT id FROM anuncios WHERE id = ?), " +
                     "(SELECT id FROM utilizadores WHERE email = ?))";
@@ -211,7 +214,6 @@ public class AnuncioRepository {
                 stmt.executeUpdate();
             }
 
-            // 2. Incrementar contador no anuncio
             String sqlUpdate = "UPDATE anuncios SET total_visualizacoes = total_visualizacoes + 1 WHERE id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
                 stmt.setString(1, anuncioId);
@@ -231,31 +233,18 @@ public class AnuncioRepository {
         }
     }
 
-    public boolean jaVisualizou(String anuncioId, String email) throws SQLException {
-        String sql = "SELECT 1 FROM visualizacoes_anuncio v " +
-                "JOIN anuncios a ON v.anuncio_id = a.id " +
-                "JOIN utilizadores u ON v.utilizador_id = u.id " +
-                "WHERE a.id = ? AND u.email = ?";
+    public void incrementarVisualizacao(String anuncioId) throws SQLException {
+        String sql = "UPDATE anuncios SET total_visualizacoes = total_visualizacoes + 1 WHERE id = ?";
 
         try (Connection conn = ConnectionFactory.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, anuncioId);
-            stmt.setString(2, email);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
-        }
-    }
-
-    public void desativarAnunciosExpirados() throws SQLException {
-        String sql = "UPDATE anuncios SET activo = false WHERE data_expiracao < NOW() AND activo = true";
-
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-
             stmt.executeUpdate();
         }
     }
+
+    // ==================== ATIVAR / DESATIVAR ====================
 
     public void desativar(String id) throws SQLException {
         String sql = "UPDATE anuncios SET activo = false WHERE id = ?";
@@ -279,6 +268,18 @@ public class AnuncioRepository {
         }
     }
 
+    public void desativarAnunciosExpirados() throws SQLException {
+        String sql = "UPDATE anuncios SET activo = false WHERE data_expiracao < NOW() AND activo = true";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.executeUpdate();
+        }
+    }
+
+    // ==================== ELIMINAR ====================
+
     public void eliminar(String id) throws SQLException {
         String sql = "DELETE FROM anuncios WHERE id = ?";
 
@@ -289,6 +290,8 @@ public class AnuncioRepository {
             stmt.executeUpdate();
         }
     }
+
+    // ==================== CONTAGEM ====================
 
     public int contarAnunciosAtivosPorUtilizador(String email) throws SQLException {
         String sql = "SELECT COUNT(*) FROM anuncios a " +
@@ -308,48 +311,25 @@ public class AnuncioRepository {
         }
     }
 
-    private long obterUtilizadorId(String email, Connection conn) throws SQLException {
-        String sql = "SELECT id FROM utilizadores WHERE email = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, email);
+    // ==================== VERIFICACOES ====================
+
+    public boolean jaVisualizou(String anuncioId, String email) throws SQLException {
+        String sql = "SELECT 1 FROM visualizacoes_anuncio v " +
+                "JOIN anuncios a ON v.anuncio_id = a.id " +
+                "JOIN utilizadores u ON v.utilizador_id = u.id " +
+                "WHERE a.id = ? AND u.email = ?";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, anuncioId);
+            stmt.setString(2, email);
             ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
-            throw new SQLException("Utilizador nao encontrado: " + email);
+            return rs.next();
         }
     }
 
-    private long obterLocalId(String localNome, Connection conn) throws SQLException {
-        String sql = "SELECT id FROM locais WHERE nome = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, localNome);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
-            return 1;
-        }
-    }
-
-    private void atualizarEstatisticasUtilizador(String email, Connection conn) throws SQLException {
-        String sql = "UPDATE utilizadores SET total_anuncios_publicados = total_anuncios_publicados + 1 WHERE email = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, email);
-            stmt.executeUpdate();
-        }
-    }
-
-    private void atualizarEstatisticasInfraestrutura(String localNome, Connection conn) throws SQLException {
-        String sql = "UPDATE infraestruturas i " +
-                "JOIN locais l ON i.id = l.infraestrutura_id " +
-                "SET i.anuncios_publicados = i.anuncios_publicados + 1 " +
-                "WHERE l.nome = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, localNome);
-            stmt.executeUpdate();
-        }
-    }
+    // ==================== FILTRAGEM POR PERFIL ====================
 
     public List<Anuncio> buscarAnunciosVisiveisPorLocal(String localNome, Map<String, String> perfilUtilizador)
             throws SQLException {
@@ -368,19 +348,7 @@ public class AnuncioRepository {
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
-                Anuncio a = new Anuncio();
-                a.setId(rs.getString("id"));
-                a.setTitulo(rs.getString("titulo"));
-                a.setDescricao(rs.getString("descricao"));
-                a.setAutorEmail(rs.getString("autor_email"));
-                a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
-                a.setActivo(rs.getBoolean("activo"));
-
-                Timestamp ts = rs.getTimestamp("data_criacao");
-                if (ts != null)
-                    a.setDataCriacao(ts.toLocalDateTime());
-
-                todosAnuncios.add(a);
+                todosAnuncios.add(mapearAnuncio(rs));
             }
         }
 
@@ -399,19 +367,7 @@ public class AnuncioRepository {
 
     private boolean isAnuncioVisivel(Anuncio anuncio, Map<String, String> perfil, RestricaoRepository restricaoRepo)
             throws SQLException {
-        // Buscar ID do anuncio no banco
-        String sql = "SELECT id FROM anuncios WHERE id = ?";
-        Long anuncioId = null;
-
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, anuncio.getId());
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                anuncioId = rs.getLong(1);
-            }
-        }
-
+        Long anuncioId = obterIdAnuncio(anuncio.getId());
         if (anuncioId == null)
             return true;
 
@@ -421,12 +377,10 @@ public class AnuncioRepository {
             String valorPerfil = perfil.getOrDefault(r.getChave(), "");
 
             if (r.getTipo().equals("WHITELIST")) {
-                // WHITELIST: so permite se o perfil tiver a chave=valor
                 if (!valorPerfil.equals(r.getValor())) {
                     return false;
                 }
             } else if (r.getTipo().equals("BLACKLIST")) {
-                // BLACKLIST: bloqueia se o perfil tiver a chave=valor
                 if (valorPerfil.equals(r.getValor())) {
                     return false;
                 }
@@ -435,74 +389,65 @@ public class AnuncioRepository {
         return true;
     }
 
-    public List<Anuncio> buscarPorLocalAtivo(String local) throws SQLException {
-        String sql = "SELECT a.*, u.email as autor_email, l.nome as local_nome FROM anuncios a " +
-                "JOIN utilizadores u ON a.utilizador_id = u.id " +
-                "JOIN locais l ON a.local_id = l.id " +
-                "WHERE l.nome = ? AND a.activo = true AND a.data_expiracao > NOW() " +
-                "ORDER BY a.data_criacao DESC";
+    // ==================== METODOS AUXILIARES ====================
 
-        List<Anuncio> lista = new ArrayList<>();
-
+    private Long obterUtilizadorId(String email) throws SQLException {
+        String sql = "SELECT id FROM utilizadores WHERE email = ?";
         try (Connection conn = ConnectionFactory.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, local);
+            stmt.setString(1, email);
             ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                Anuncio a = new Anuncio();
-                a.setId(rs.getString("id"));
-                a.setTitulo(rs.getString("titulo"));
-                a.setDescricao(rs.getString("descricao"));
-                a.setAutorEmail(rs.getString("autor_email"));
-                a.setLocal(rs.getString("local_nome"));
-                a.setActivo(rs.getBoolean("activo"));
-                a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
-
-                Timestamp ts = rs.getTimestamp("data_criacao");
-                if (ts != null)
-                    a.setDataCriacao(ts.toLocalDateTime());
-
-                ts = rs.getTimestamp("data_expiracao");
-                if (ts != null)
-                    a.setDataExpiracao(ts.toLocalDateTime());
-
-                lista.add(a);
+            if (rs.next()) {
+                return rs.getLong("id");
             }
+            throw new SQLException("Utilizador nao encontrado: " + email);
         }
-        return lista;
     }
 
-    public void incrementarVisualizacao(String anuncioId) throws SQLException {
-        String sql = "UPDATE anuncios SET total_visualizacoes = total_visualizacoes + 1 WHERE id = ?";
-
+    private Long obterLocalId(String localNome) throws SQLException {
+        String sql = "SELECT id FROM locais WHERE nome = ?";
         try (Connection conn = ConnectionFactory.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, anuncioId);
-            stmt.executeUpdate();
+            stmt.setString(1, localNome);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getLong("id");
+            }
+            return 1L; // Local padrao
         }
     }
 
-    public void salvar(Anuncio anuncio) throws SQLException {
-    String sql = "INSERT INTO anuncios (id, titulo, descricao, utilizador_id, local_id, data_criacao, data_expiracao, total_visualizacoes, activo) "
-               + "VALUES (?, ?, ?, (SELECT id FROM utilizadores WHERE email = ?), (SELECT id FROM locais WHERE nome = ?), ?, ?, ?, ?)";
-    
-    try (Connection conn = ConnectionFactory.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-        
-        stmt.setString(1, anuncio.getId());
-        stmt.setString(2, anuncio.getTitulo());
-        stmt.setString(3, anuncio.getDescricao());
-        stmt.setString(4, anuncio.getAutorEmail());
-        stmt.setString(5, anuncio.getLocal());
-        stmt.setTimestamp(6, Timestamp.valueOf(anuncio.getDataCriacao()));
-        stmt.setTimestamp(7, Timestamp.valueOf(anuncio.getDataExpiracao()));
-        stmt.setInt(8, anuncio.getTotalVisualizacoes());
-        stmt.setBoolean(9, anuncio.isActivo());
-        
-        stmt.executeUpdate();
+    private Long obterIdAnuncio(String id) throws SQLException {
+        String sql = "SELECT id FROM anuncios WHERE id = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+            return null;
+        }
     }
-}
+
+    private Anuncio mapearAnuncio(ResultSet rs) throws SQLException {
+        Anuncio a = new Anuncio();
+        a.setId(rs.getString("id"));
+        a.setTitulo(rs.getString("titulo"));
+        a.setDescricao(rs.getString("descricao"));
+        a.setAutorEmail(rs.getString("autor_email"));
+        a.setLocal(rs.getString("local_nome"));
+        a.setTotalVisualizacoes(rs.getInt("total_visualizacoes"));
+        a.setActivo(rs.getBoolean("activo"));
+
+        Timestamp ts = rs.getTimestamp("data_criacao");
+        if (ts != null)
+            a.setDataCriacao(ts.toLocalDateTime());
+
+        ts = rs.getTimestamp("data_expiracao");
+        if (ts != null)
+            a.setDataExpiracao(ts.toLocalDateTime());
+
+        return a;
+    }
 }

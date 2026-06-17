@@ -1,5 +1,7 @@
 package pt.anunciosloc.server.service;
 
+import jakarta.jws.WebMethod;
+import jakarta.jws.WebParam;
 import jakarta.jws.WebService;
 import pt.anunciosloc.server.config.ConnectionFactory;
 import pt.anunciosloc.server.model.*;
@@ -352,16 +354,70 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
     }
 
     @Override
-    public String[] listarAnunciosPorUtilizador(String email) {
+public String[] listarAnunciosPorUtilizador(String email) {
+    try {
+        List<Anuncio> anuncios = anuncioRepo.buscarPorAutor(email);
+        
+        System.out.println("=== LISTAR ANUNCIOS POR UTILIZADOR ===");
+        System.out.println("Email: " + email);
+        System.out.println("Total de anuncios: " + anuncios.size());
+        
+        if (anuncios.isEmpty()) {
+            return new String[] { "Nenhum anuncio encontrado" };
+        }
+        
+        return anuncios.stream()
+                .map(a -> {
+                    // VERIFICAR SE OS DADOS EXISTEM
+                    String titulo = a.getTitulo() != null ? a.getTitulo() : "Sem titulo";
+                    String descricao = a.getDescricao() != null ? a.getDescricao() : "Sem descricao";
+                    String local = a.getLocal() != null ? a.getLocal() : "Sem local";
+                    String data = a.getDataCriacao() != null ? a.getDataCriacao().toString() : LocalDateTime.now().toString();
+                    int visualizacoes = a.getTotalVisualizacoes();
+                    int entregas = a.getTotalEntregas();
+                    String ativo = a.isActivo() ? "1" : "0";
+                    String expirado = a.isExpirado() ? "1" : "0";
+                    
+                    String resultado = titulo + "|" +
+                                       descricao + "|" +
+                                       local + "|" +
+                                       data + "|" +
+                                       visualizacoes + "|" +
+                                       entregas + "|" +
+                                       ativo + "|" +
+                                       expirado;
+                    
+                    System.out.println("Anuncio: " + resultado);
+                    return resultado;
+                })
+                .toArray(String[]::new);
+    } catch (SQLException e) {
+        System.err.println("Erro ao listar anuncios: " + e.getMessage());
+        return new String[] { "Erro: " + e.getMessage() };
+    }
+}
+    @WebMethod
+    public String[] listarAnunciosCompletosPorUtilizador(@WebParam(name = "email") String email) {
         try {
             List<Anuncio> anuncios = anuncioRepo.buscarPorAutor(email);
             return anuncios.stream()
-                    .map(a -> "[" + a.getDataCriacao() + "] " +
-                            a.getConteudo() +
-                            " (" + a.getLocal() + ")")
+                    .map(a -> {
+                        // Formato completo:
+                        // id|titulo|descricao|local|data|visualizacoes|entregas|ativo|expirado
+                        return a.getId() + "|" +
+                                a.getTitulo() + "|" +
+                                a.getDescricao() + "|" +
+                                a.getLocal() + "|" +
+                                a.getDataCriacao().toString() + "|" +
+                                a.getTotalVisualizacoes() + "|" +
+                                a.getTotalEntregas() + "|" +
+                                (a.isActivo() ? "1" : "0") + "|" +
+                                (a.isExpirado() ? "1" : "0") + "|" +
+                                a.getDataExpiracao().toString();
+                    })
                     .toArray(String[]::new);
         } catch (SQLException e) {
-            return new String[] { "Erro ao listar anuncios: " + e.getMessage() };
+            return new String[] { "Erro: " + e.getMessage() };
         }
     }
 
@@ -642,90 +698,92 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
     }
 
     @Override
-public String postarMensagemCompleta(String email, String titulo, String descricao, String local, int diasValidade) {
-    try {
-        // 1. Validar utilizador
-        Utilizador u = utilizadorRepo.buscarPorEmail(email);
-        if (u == null || !u.isAtivo()) {
-            return "Erro: Utilizador nao encontrado ou conta desativada: " + email;
+    public String postarMensagemCompleta(String email, String titulo, String descricao, String local,
+            int diasValidade) {
+        try {
+            // 1. Validar utilizador
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo()) {
+                return "Erro: Utilizador nao encontrado ou conta desativada: " + email;
+            }
+
+            // 2. Validar titulo
+            if (titulo == null || titulo.trim().isEmpty()) {
+                return "Erro: Titulo do anuncio e obrigatorio!";
+            }
+            if (titulo.length() > 100) {
+                return "Erro: Titulo excede 100 caracteres!";
+            }
+
+            // 3. Validar descricao
+            if (descricao == null || descricao.trim().isEmpty()) {
+                return "Erro: Descricao do anuncio e obrigatoria!";
+            }
+            if (descricao.length() > 1000) {
+                return "Erro: Descricao excede 1000 caracteres!";
+            }
+
+            // 4. Validar local
+            if (local == null || local.trim().isEmpty()) {
+                return "Erro: Local do anuncio e obrigatorio!";
+            }
+
+            // 5. Validar dias de validade
+            if (diasValidade < 1 || diasValidade > 365) {
+                return "Erro: Dias de validade invalido! (1 a 365)";
+            }
+
+            // 6. Verificar saldo (custa 5 pontos)
+            if (u.getSaldo() < 5.0) {
+                return "Erro: Saldo insuficiente! Necessario 5 pontos para publicar. Seu saldo: " + (int) u.getSaldo();
+            }
+
+            // 7. Verificar tempo desde o ultimo anuncio (minimo 5 minutos)
+            if (!u.podePublicarAnuncio()) {
+                return "Erro: Aguarde 5 minutos para publicar outro anuncio.";
+            }
+
+            // 8. Verificar se o local existe
+            Infraestrutura infra = infraRepo.buscarPorNome(local);
+            if (infra == null) {
+                return "Erro: Local '" + local + "' nao encontrado!";
+            }
+
+            // 9. Debitar saldo
+            boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
+            if (!debitado) {
+                return "Erro: Falha ao debitar saldo.";
+            }
+
+            // 10. Criar e salvar anuncio
+            Anuncio anuncio = new Anuncio(titulo, descricao, email, local);
+            anuncio.setDataExpiracao(java.time.LocalDateTime.now().plusDays(diasValidade));
+            anuncio.setTotalVisualizacoes(0);
+            anuncio.setActivo(true);
+
+            anuncioRepo.salvar(anuncio);
+
+            // 11. Atualizar estatisticas do utilizador
+            utilizadorRepo.atualizarUltimoAnuncio(email, java.time.LocalDateTime.now());
+            utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1,
+                    u.getTotalVisualizacoesRecebidas());
+
+            // 12. Atualizar quorum
+            quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
+
+            // 13. Atualizar estatisticas da infraestrutura
+            infra.setTotalAnuncios(infra.getTotalAnuncios() + 1);
+            // infraRepo.atualizar(infra);
+
+            return "Anuncio publicado com sucesso! ID: " + anuncio.getId() +
+                    "\nTitulo: " + titulo +
+                    "\nLocal: " + local +
+                    "\nValidade: " + diasValidade + " dias" +
+                    "\nSaldo restante: " + (int) (u.getSaldo() - 5.0);
+
+        } catch (SQLException e) {
+            return "Erro ao publicar anuncio: " + e.getMessage();
         }
-        
-        // 2. Validar titulo
-        if (titulo == null || titulo.trim().isEmpty()) {
-            return "Erro: Titulo do anuncio e obrigatorio!";
-        }
-        if (titulo.length() > 100) {
-            return "Erro: Titulo excede 100 caracteres!";
-        }
-        
-        // 3. Validar descricao
-        if (descricao == null || descricao.trim().isEmpty()) {
-            return "Erro: Descricao do anuncio e obrigatoria!";
-        }
-        if (descricao.length() > 1000) {
-            return "Erro: Descricao excede 1000 caracteres!";
-        }
-        
-        // 4. Validar local
-        if (local == null || local.trim().isEmpty()) {
-            return "Erro: Local do anuncio e obrigatorio!";
-        }
-        
-        // 5. Validar dias de validade
-        if (diasValidade < 1 || diasValidade > 365) {
-            return "Erro: Dias de validade invalido! (1 a 365)";
-        }
-        
-        // 6. Verificar saldo (custa 5 pontos)
-        if (u.getSaldo() < 5.0) {
-            return "Erro: Saldo insuficiente! Necessario 5 pontos para publicar. Seu saldo: " + (int) u.getSaldo();
-        }
-        
-        // 7. Verificar tempo desde o ultimo anuncio (minimo 5 minutos)
-        if (!u.podePublicarAnuncio()) {
-            return "Erro: Aguarde 5 minutos para publicar outro anuncio.";
-        }
-        
-        // 8. Verificar se o local existe
-        Infraestrutura infra = infraRepo.buscarPorNome(local);
-        if (infra == null) {
-            return "Erro: Local '" + local + "' nao encontrado!";
-        }
-        
-        // 9. Debitar saldo
-        boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
-        if (!debitado) {
-            return "Erro: Falha ao debitar saldo.";
-        }
-        
-        // 10. Criar e salvar anuncio
-        Anuncio anuncio = new Anuncio(titulo, descricao, email, local);
-        anuncio.setDataExpiracao(java.time.LocalDateTime.now().plusDays(diasValidade));
-        anuncio.setTotalVisualizacoes(0);
-        anuncio.setActivo(true);
-        
-        anuncioRepo.salvar(anuncio);
-        
-        // 11. Atualizar estatisticas do utilizador
-        utilizadorRepo.atualizarUltimoAnuncio(email, java.time.LocalDateTime.now());
-        utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1, u.getTotalVisualizacoesRecebidas());
-        
-        // 12. Atualizar quorum
-        quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
-        
-        // 13. Atualizar estatisticas da infraestrutura
-        infra.setTotalAnuncios(infra.getTotalAnuncios() + 1);
-        //infraRepo.atualizar(infra);
-        
-        return "Anuncio publicado com sucesso! ID: " + anuncio.getId() + 
-               "\nTitulo: " + titulo +
-               "\nLocal: " + local +
-               "\nValidade: " + diasValidade + " dias" +
-               "\nSaldo restante: " + (int) (u.getSaldo() - 5.0);
-        
-    } catch (SQLException e) {
-        return "Erro ao publicar anuncio: " + e.getMessage();
     }
-}
 
 }
