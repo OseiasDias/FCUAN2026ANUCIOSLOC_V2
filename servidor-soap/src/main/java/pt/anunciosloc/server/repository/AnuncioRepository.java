@@ -404,19 +404,46 @@ public class AnuncioRepository {
         }
     }
 
-    private Long obterLocalId(String localNome) throws SQLException {
-        String sql = "SELECT id FROM locais WHERE nome = ?";
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, localNome);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getLong("id");
-            }
-            return 1L; // Local padrao
+   private Long obterLocalId(String localNome) throws SQLException {
+    // Primeiro tentar com comparação exata (case-sensitive)
+    String sql = "SELECT id FROM locais WHERE nome = ?";
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        stmt.setString(1, localNome);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            return rs.getLong("id");
         }
     }
-
+    
+    // Se não encontrou, tentar com LOWER e TRIM (case-insensitive)
+    String sqlLike = "SELECT id FROM locais WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?))";
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sqlLike)) {
+        stmt.setString(1, localNome);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            System.out.println("Local encontrado com case-insensitive: " + localNome);
+            return rs.getLong("id");
+        }
+    }
+    
+    // Se ainda não encontrou, tentar com LIKE (ignorando espaços)
+    String sqlLike2 = "SELECT id FROM locais WHERE REPLACE(LOWER(nome), ' ', '') = REPLACE(LOWER(?), ' ', '')";
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sqlLike2)) {
+        stmt.setString(1, localNome);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            System.out.println("Local encontrado com REPLACE: " + localNome);
+            return rs.getLong("id");
+        }
+    }
+    
+    // Local padrão (1) se não encontrar
+    System.out.println("Local nao encontrado, usando ID 1: " + localNome);
+    return 1L;
+}
     private Long obterIdAnuncio(String id) throws SQLException {
         String sql = "SELECT id FROM anuncios WHERE id = ?";
         try (Connection conn = ConnectionFactory.getConnection();

@@ -209,7 +209,6 @@ class ApiService {
     return result['sucesso'] == true;
   }
 
-  // Método completo - com titulo, descricao e validade
   static Future<Map<String, dynamic>> publicarAnuncioCompleto({
     required String email,
     required String titulo,
@@ -218,17 +217,16 @@ class ApiService {
     required int diasValidade,
   }) async {
     try {
-      // 1. Primeiro, consultar o saldo do utilizador
+      // Verificar saldo primeiro
       final saldoAtual = await consultarSaldo(email);
       print("Saldo atual: $saldoAtual");
 
-      // 2. Verificar se o saldo é suficiente (custa 5 pontos)
       if (saldoAtual < 5) {
         return {
           'sucesso': false,
           'id': null,
           'mensagem':
-              'Saldo insuficiente! Você tem $saldoAtual pontos. Necessário 5 pontos para publicar um anúncio.',
+              'Saldo insuficiente! Você tem $saldoAtual pontos. Necessário 5 pontos.',
           'saldoRestante': saldoAtual,
           'codigo': 'SALDO_INSUFICIENTE'
         };
@@ -275,21 +273,24 @@ class ApiService {
         if (returnElement != null) {
           final texto = returnElement.innerText;
 
-          // Verificar se a resposta contém erro de saldo
-          if (texto.contains('Saldo insuficiente')) {
-            // Extrair o saldo da mensagem de erro
-            final regexSaldo = RegExp(r'(\d+) pontos');
-            final matchSaldo = regexSaldo.firstMatch(texto);
-            final saldoAtualizado = matchSaldo != null
-                ? int.tryParse(matchSaldo.group(1) ?? '0')
-                : saldoAtual;
+          // VERIFICAR SE A RESPOSTA CONTÉM ERRO
+          final palavrasErro = [
+            'Erro:',
+            'Saldo insuficiente',
+            'Aguarde',
+            'não encontrado',
+            'inválido'
+          ];
+          final temErro =
+              palavrasErro.any((palavra) => texto.contains(palavra));
 
+          if (temErro) {
             return {
               'sucesso': false,
               'id': null,
               'mensagem': texto,
-              'saldoRestante': saldoAtualizado ?? saldoAtual,
-              'codigo': 'SALDO_INSUFICIENTE'
+              'saldoRestante': null,
+              'codigo': 'ERRO_NEGOCIO'
             };
           }
 
@@ -1166,6 +1167,15 @@ class ApiService {
         List<AnuncioModel> anuncios = [];
         for (var item in items) {
           final texto = item.innerText;
+
+          // IGNORAR mensagens que não são anúncios válidos
+          if (texto.contains('Nenhum anuncio encontrado') ||
+              texto.contains('Erro:') ||
+              texto.trim().isEmpty) {
+            print("Ignorando mensagem: $texto");
+            continue; // Pula este item
+          }
+
           final anuncio = AnuncioModel.fromSoap(texto);
           anuncios.add(anuncio);
         }

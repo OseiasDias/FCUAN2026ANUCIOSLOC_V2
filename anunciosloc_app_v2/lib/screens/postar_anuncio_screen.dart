@@ -110,6 +110,7 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
   }
 
   Future<void> _publicar() async {
+    // Validar formulario
     if (!_formChave.currentState!.validate()) {
       return;
     }
@@ -165,6 +166,19 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
       print("Local: $_localSelecionado");
       print("Dias validade: $_diasValidade");
 
+      // 1. Verificar saldo ANTES de publicar
+      final saldoAtual = await ApiService.consultarSaldo(email);
+      print("Saldo atual: $saldoAtual");
+
+      if (saldoAtual < 5) {
+        setState(() => _carregando = false);
+        _mostrarMensagem(
+            '💰 Saldo insuficiente! Você tem $saldoAtual pontos. Necessário 5 pontos para publicar.',
+            isErro: true);
+        return;
+      }
+
+      // 2. Publicar anuncio
       final resultado = await ApiService.publicarAnuncioCompleto(
         email: email,
         titulo: _tituloController.text.trim(),
@@ -175,6 +189,7 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
 
       print("Resultado: $resultado");
 
+      // 3. Verificar se foi sucesso
       if (resultado['sucesso'] == true && mounted) {
         final anuncioId = resultado['id'];
 
@@ -194,21 +209,38 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
         }
 
         setState(() => _carregando = false);
-        _mostrarMensagem('Anuncio publicado com sucesso!');
+        _mostrarMensagem('✅ Anuncio publicado com sucesso!');
         _tituloController.clear();
         _descricaoController.clear();
         setState(() => _restricoes.clear());
 
-        // Aguardar um momento antes de voltar
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
           Navigator.pop(context, true);
         }
       } else if (mounted) {
         setState(() => _carregando = false);
-        final mensagemErro =
-            resultado['mensagem'] ?? 'Erro ao publicar anuncio';
-        _mostrarMensagem(mensagemErro, isErro: true);
+        final mensagem = resultado['mensagem'] ?? 'Erro ao publicar anuncio';
+
+        // Mensagens especificas para cada tipo de erro
+        if (mensagem.contains('Aguarde 5 minutos')) {
+          _mostrarMensagem(' Aguarde 5 minutos entre cada publicacao!',
+              isErro: true);
+        } else if (mensagem.contains('Saldo insuficiente')) {
+          _mostrarMensagem(' Saldo insuficiente! Recarregue seus pontos.',
+              isErro: true);
+        } else if (mensagem.contains('Local nao encontrado')) {
+          _mostrarMensagem(
+              '📍 Local nao encontrado. Selecione um local valido.',
+              isErro: true);
+        } else if (mensagem.contains('Titulo') || mensagem.contains('titulo')) {
+          _mostrarMensagem(' ${mensagem}', isErro: true);
+        } else if (mensagem.contains('Descricao') ||
+            mensagem.contains('descricao')) {
+          _mostrarMensagem(' ${mensagem}', isErro: true);
+        } else {
+          _mostrarMensagem(mensagem, isErro: true);
+        }
       }
     } catch (e) {
       print("Erro ao publicar: $e");

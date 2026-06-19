@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../utils/preferencias.dart';
 import '../models/anuncio_model.dart';
+import 'postar_anuncio_screen.dart'; // ← ADICIONAR IMPORTAÇÃO
 
 class MeusAnunciosScreen extends StatefulWidget {
   const MeusAnunciosScreen({super.key});
@@ -146,25 +147,7 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
                   ),
                 )
               : anuncios.isEmpty
-                  ? const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.announcement_outlined,
-                              size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            'Nenhum anuncio encontrado',
-                            style: TextStyle(fontSize: 18, color: Colors.grey),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Publique seu primeiro anuncio!',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    )
+                  ? _buildListaVazia()
                   : ListView.builder(
                       itemCount: anuncios.length,
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -355,8 +338,13 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
                     ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.pushNamed(context, '/postar_anuncio')
-              .then((_) => carregar());
+          // MÉTODO CORRETO PARA REDIRECIONAR
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PostarAnuncioScreen(),
+            ),
+          ).then((_) => carregar());
         },
         icon: const Icon(Icons.add),
         label: const Text('Novo Anuncio'),
@@ -365,6 +353,51 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
       ),
     );
   }
+
+  // ==================== WIDGET LISTA VAZIA ====================
+
+  Widget _buildListaVazia() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.indigo.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.announcement_outlined,
+              size: 80,
+              color: Colors.indigo,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Nenhum anúncio publicado',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Os seus anúncios aparecerão aqui\nAssim que publicar o seu primeiro anúncio',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== DETALHES DO ANUNCIO ====================
 
   void _mostrarDetalhesAnuncio(BuildContext context, AnuncioModel anuncio) {
     showModalBottomSheet(
