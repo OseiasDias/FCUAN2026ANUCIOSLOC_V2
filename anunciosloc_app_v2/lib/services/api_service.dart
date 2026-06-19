@@ -1162,18 +1162,31 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final doc = XmlDocument.parse(response.body);
-        final items = doc.findAllElements('return');
+
+        // Buscar o elemento <return> primeiro
+        final returnElement = doc.findAllElements('return').firstOrNull;
+
+        if (returnElement == null) {
+          print("Elemento return nao encontrado");
+          return [];
+        }
+
+        // Depois buscar todos os <item> dentro do <return>
+        final items = returnElement.findAllElements('item');
+
+        print("Items encontrados: ${items.length}");
 
         List<AnuncioModel> anuncios = [];
         for (var item in items) {
-          final texto = item.innerText;
+          final texto = item.innerText.trim();
+          print("Processando item: $texto");
 
           // IGNORAR mensagens que não são anúncios válidos
           if (texto.contains('Nenhum anuncio encontrado') ||
               texto.contains('Erro:') ||
-              texto.trim().isEmpty) {
+              texto.isEmpty) {
             print("Ignorando mensagem: $texto");
-            continue; // Pula este item
+            continue;
           }
 
           final anuncio = AnuncioModel.fromSoap(texto);

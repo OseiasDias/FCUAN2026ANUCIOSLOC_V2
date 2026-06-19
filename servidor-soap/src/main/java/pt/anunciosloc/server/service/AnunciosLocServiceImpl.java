@@ -186,48 +186,48 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
         }
     }
 
-    @Override
-    public String postarMensagem(String email, String conteudo, String local) {
-        try {
-            Utilizador u = utilizadorRepo.buscarPorEmail(email);
-            if (u == null || !u.isAtivo())
-                return "Utilizador nao encontrado: " + email;
+   @Override
+public String postarMensagem(String email, String conteudo, String local) {
+    try {
+        Utilizador u = utilizadorRepo.buscarPorEmail(email);
+        if (u == null || !u.isAtivo())
+            return "Utilizador nao encontrado: " + email;
 
-            // Verificar saldo
-            if (u.getSaldo() < 5.0) {
-                return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
-            }
-
-            // Verificar tempo desde o ultimo anuncio
-            if (!u.podePublicarAnuncio()) {
-                return "Aguarde 5 minutos para publicar outro anuncio.";
-            }
-
-            // Debitar saldo
-            boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
-            if (!debitado) {
-                return "Erro ao debitar saldo.";
-            }
-
-            // Criar e salvar anuncio
-            Anuncio anuncio = new Anuncio(conteudo, email, local);
-            anuncioRepo.salvar(anuncio);
-
-            // Atualizar ultimo anuncio
-            utilizadorRepo.atualizarUltimoAnuncio(email, LocalDateTime.now());
-
-            // Atualizar estatisticas
-            utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1,
-                    u.getTotalVisualizacoesRecebidas());
-
-            // Atualizar quorum
-            quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
-
-            return "Anuncio publicado! ID: " + anuncio.getId();
-        } catch (SQLException e) {
-            return "Erro ao publicar: " + e.getMessage();
+        // Verificar saldo
+        if (u.getSaldo() < 5.0) {
+            return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
         }
+
+        // REMOVER a verificação do timer de 5 minutos
+        // if (!u.podePublicarAnuncio()) {
+        //     return "Aguarde 5 minutos para publicar outro anuncio.";
+        // }
+
+        // Debitar saldo
+        boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
+        if (!debitado) {
+            return "Erro ao debitar saldo.";
+        }
+
+        // Criar e salvar anuncio
+        Anuncio anuncio = new Anuncio(conteudo, email, local);
+        anuncioRepo.salvar(anuncio);
+
+        // Atualizar ultimo anuncio
+        utilizadorRepo.atualizarUltimoAnuncio(email, LocalDateTime.now());
+
+        // Atualizar estatisticas
+        utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1,
+                u.getTotalVisualizacoesRecebidas());
+
+        // Atualizar quorum
+        quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
+
+        return "Anuncio publicado! ID: " + anuncio.getId();
+    } catch (SQLException e) {
+        return "Erro ao publicar: " + e.getMessage();
     }
+}
 
     @Override
     public String[] receberMensagens(String email, String local) {
