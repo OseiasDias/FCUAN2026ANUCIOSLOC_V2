@@ -186,48 +186,48 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
         }
     }
 
-   @Override
-public String postarMensagem(String email, String conteudo, String local) {
-    try {
-        Utilizador u = utilizadorRepo.buscarPorEmail(email);
-        if (u == null || !u.isAtivo())
-            return "Utilizador nao encontrado: " + email;
+    @Override
+    public String postarMensagem(String email, String conteudo, String local) {
+        try {
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo())
+                return "Utilizador nao encontrado: " + email;
 
-        // Verificar saldo
-        if (u.getSaldo() < 5.0) {
-            return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
+            // Verificar saldo
+            if (u.getSaldo() < 5.0) {
+                return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
+            }
+
+            // REMOVER a verificação do timer de 5 minutos
+            // if (!u.podePublicarAnuncio()) {
+            // return "Aguarde 5 minutos para publicar outro anuncio.";
+            // }
+
+            // Debitar saldo
+            boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
+            if (!debitado) {
+                return "Erro ao debitar saldo.";
+            }
+
+            // Criar e salvar anuncio
+            Anuncio anuncio = new Anuncio(conteudo, email, local);
+            anuncioRepo.salvar(anuncio);
+
+            // Atualizar ultimo anuncio
+            utilizadorRepo.atualizarUltimoAnuncio(email, LocalDateTime.now());
+
+            // Atualizar estatisticas
+            utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1,
+                    u.getTotalVisualizacoesRecebidas());
+
+            // Atualizar quorum
+            quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
+
+            return "Anuncio publicado! ID: " + anuncio.getId();
+        } catch (SQLException e) {
+            return "Erro ao publicar: " + e.getMessage();
         }
-
-        // REMOVER a verificação do timer de 5 minutos
-        // if (!u.podePublicarAnuncio()) {
-        //     return "Aguarde 5 minutos para publicar outro anuncio.";
-        // }
-
-        // Debitar saldo
-        boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
-        if (!debitado) {
-            return "Erro ao debitar saldo.";
-        }
-
-        // Criar e salvar anuncio
-        Anuncio anuncio = new Anuncio(conteudo, email, local);
-        anuncioRepo.salvar(anuncio);
-
-        // Atualizar ultimo anuncio
-        utilizadorRepo.atualizarUltimoAnuncio(email, LocalDateTime.now());
-
-        // Atualizar estatisticas
-        utilizadorRepo.atualizarEstatisticas(email, u.getTotalAnunciosPublicados() + 1,
-                u.getTotalVisualizacoesRecebidas());
-
-        // Atualizar quorum
-        quorumManager.escreverSaldo(email, (int) (u.getSaldo() - 5.0));
-
-        return "Anuncio publicado! ID: " + anuncio.getId();
-    } catch (SQLException e) {
-        return "Erro ao publicar: " + e.getMessage();
     }
-}
 
     @Override
     public String[] receberMensagens(String email, String local) {
@@ -354,48 +354,50 @@ public String postarMensagem(String email, String conteudo, String local) {
     }
 
     @Override
-public String[] listarAnunciosPorUtilizador(String email) {
-    try {
-        List<Anuncio> anuncios = anuncioRepo.buscarPorAutor(email);
-        
-        System.out.println("=== LISTAR ANUNCIOS POR UTILIZADOR ===");
-        System.out.println("Email: " + email);
-        System.out.println("Total de anuncios: " + anuncios.size());
-        
-        if (anuncios.isEmpty()) {
-            return new String[] { "Nenhum anuncio encontrado" };
+    public String[] listarAnunciosPorUtilizador(String email) {
+        try {
+            List<Anuncio> anuncios = anuncioRepo.buscarPorAutor(email);
+
+            System.out.println("=== LISTAR ANUNCIOS POR UTILIZADOR ===");
+            System.out.println("Email: " + email);
+            System.out.println("Total de anuncios: " + anuncios.size());
+
+            if (anuncios.isEmpty()) {
+                return new String[] { "Nenhum anuncio encontrado" };
+            }
+
+            return anuncios.stream()
+                    .map(a -> {
+                        // VERIFICAR SE OS DADOS EXISTEM
+                        String titulo = a.getTitulo() != null ? a.getTitulo() : "Sem titulo";
+                        String descricao = a.getDescricao() != null ? a.getDescricao() : "Sem descricao";
+                        String local = a.getLocal() != null ? a.getLocal() : "Sem local";
+                        String data = a.getDataCriacao() != null ? a.getDataCriacao().toString()
+                                : LocalDateTime.now().toString();
+                        int visualizacoes = a.getTotalVisualizacoes();
+                        int entregas = a.getTotalEntregas();
+                        String ativo = a.isActivo() ? "1" : "0";
+                        String expirado = a.isExpirado() ? "1" : "0";
+
+                        String resultado = titulo + "|" +
+                                descricao + "|" +
+                                local + "|" +
+                                data + "|" +
+                                visualizacoes + "|" +
+                                entregas + "|" +
+                                ativo + "|" +
+                                expirado;
+
+                        System.out.println("Anuncio: " + resultado);
+                        return resultado;
+                    })
+                    .toArray(String[]::new);
+        } catch (SQLException e) {
+            System.err.println("Erro ao listar anuncios: " + e.getMessage());
+            return new String[] { "Erro: " + e.getMessage() };
         }
-        
-        return anuncios.stream()
-                .map(a -> {
-                    // VERIFICAR SE OS DADOS EXISTEM
-                    String titulo = a.getTitulo() != null ? a.getTitulo() : "Sem titulo";
-                    String descricao = a.getDescricao() != null ? a.getDescricao() : "Sem descricao";
-                    String local = a.getLocal() != null ? a.getLocal() : "Sem local";
-                    String data = a.getDataCriacao() != null ? a.getDataCriacao().toString() : LocalDateTime.now().toString();
-                    int visualizacoes = a.getTotalVisualizacoes();
-                    int entregas = a.getTotalEntregas();
-                    String ativo = a.isActivo() ? "1" : "0";
-                    String expirado = a.isExpirado() ? "1" : "0";
-                    
-                    String resultado = titulo + "|" +
-                                       descricao + "|" +
-                                       local + "|" +
-                                       data + "|" +
-                                       visualizacoes + "|" +
-                                       entregas + "|" +
-                                       ativo + "|" +
-                                       expirado;
-                    
-                    System.out.println("Anuncio: " + resultado);
-                    return resultado;
-                })
-                .toArray(String[]::new);
-    } catch (SQLException e) {
-        System.err.println("Erro ao listar anuncios: " + e.getMessage());
-        return new String[] { "Erro: " + e.getMessage() };
     }
-}
+
     @WebMethod
     public String[] listarAnunciosCompletosPorUtilizador(@WebParam(name = "email") String email) {
         try {
@@ -579,64 +581,73 @@ public String[] listarAnunciosPorUtilizador(String email) {
             // 1. Verificar se o utilizador existe
             Utilizador u = utilizadorRepo.buscarPorEmail(email);
             if (u == null || !u.isAtivo()) {
-                return new String[] { "Utilizador nao encontrado: " + email };
+                return new String[] { "Erro: Utilizador nao encontrado: " + email };
             }
 
-            // 2. Buscar perfil do utilizador (para filtrar por restricoes)
-            Map<String, String> perfil = obterPerfilUtilizadorMap(email);
-            System.out.println("Perfil do utilizador: " + perfil);
+            // 2. Buscar o ID do local (case-insensitive)
+            String sqlLocal = "SELECT id FROM locais WHERE LOWER(TRIM(nome)) = LOWER(TRIM(?))";
+            Long localId = null;
 
-            // 3. Buscar todos os anuncios ativos do local
-            List<Anuncio> todosAnuncios = anuncioRepo.buscarPorLocalAtivo(local);
-            System.out.println("Total de anuncios no local: " + todosAnuncios.size());
-
-            // 4. Filtrar anuncios (excluir proprios, aplicar restricoes)
-            List<String> anunciosVisiveis = new ArrayList<>();
-            RestricaoRepository restricaoRepo = new RestricaoRepository();
-
-            for (Anuncio anuncio : todosAnuncios) {
-                // Nao mostrar os proprios anuncios
-                if (anuncio.getAutorEmail().equals(email)) {
-                    System.out.println("Ignorando anuncio proprio: " + anuncio.getAutorEmail());
-                    continue;
-                }
-
-                // Verificar se o anuncio ainda esta ativo
-                if (!anuncio.isActivo()) {
-                    System.out.println("Anuncio inativo: " + anuncio.getId());
-                    continue;
-                }
-
-                // Verificar se o anuncio nao expirou
-                if (anuncio.isExpirado()) {
-                    System.out.println("Anuncio expirado: " + anuncio.getId());
-                    continue;
-                }
-
-                // Buscar ID do anuncio no banco
-                Long anuncioId = obterAnuncioIdPorUUID(anuncio.getId());
-
-                // Buscar restricoes do anuncio
-                List<Restricao> restricoes = restricaoRepo.listarPorAnuncio(anuncioId);
-
-                // Verificar se o utilizador satisfaz as restricoes
-                if (satisfazRestricoes(perfil, restricoes)) {
-                    String mensagem = formatarAnuncioParaExibicao(anuncio);
-                    anunciosVisiveis.add(mensagem);
-
-                    // Registrar visualizacao
-                    anuncioRepo.incrementarVisualizacao(anuncio.getId());
-                    System.out.println("Anuncio visivel para o utilizador: " + anuncio.getId());
-                } else {
-                    System.out.println("Anuncio bloqueado por restricoes: " + anuncio.getId());
+            try (Connection conn = ConnectionFactory.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sqlLocal)) {
+                stmt.setString(1, local);
+                ResultSet rs = stmt.executeQuery();
+                if (rs.next()) {
+                    localId = rs.getLong("id");
+                    System.out.println("Local encontrado: " + local + " (ID: " + localId + ")");
                 }
             }
 
-            System.out.println("Total de anuncios visiveis: " + anunciosVisiveis.size());
-            return anunciosVisiveis.toArray(new String[0]);
+            if (localId == null) {
+                System.out.println("Local nao encontrado: " + local);
+                return new String[] { "Erro: Local nao encontrado: " + local };
+            }
+
+            // 3. Buscar anúncios do local (excluindo os do próprio utilizador)
+            String sqlAnuncios = "SELECT a.id, a.titulo, a.descricao, u.email as autor_email, a.data_criacao " +
+                    "FROM anuncios a " +
+                    "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                    "WHERE a.local_id = ? " +
+                    "AND a.activo = 1 " +
+                    "AND a.data_expiracao > NOW() " +
+                    "AND u.email != ? " +
+                    "ORDER BY a.data_criacao DESC";
+
+            List<String> anuncios = new ArrayList<>();
+
+            try (Connection conn = ConnectionFactory.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sqlAnuncios)) {
+
+                stmt.setLong(1, localId);
+                stmt.setString(2, email);
+                ResultSet rs = stmt.executeQuery();
+
+                System.out.println("Executando query para local_id: " + localId);
+                System.out.println("Excluindo email: " + email);
+
+                int count = 0;
+                while (rs.next()) {
+                    count++;
+                    String mensagem = "📢 " + rs.getString("titulo") + "\n" +
+                            rs.getString("descricao") + "\n" +
+                            "👤 De: " + rs.getString("autor_email") + "\n" +
+                            "📅 " + rs.getTimestamp("data_criacao");
+                    anuncios.add(mensagem);
+                    System.out.println("Anuncio #" + count + ": " + rs.getString("titulo"));
+                }
+            }
+
+            System.out.println("Total de anuncios encontrados: " + anuncios.size());
+
+            if (anuncios.isEmpty()) {
+                return new String[] { "Nenhum anuncio encontrado neste local." };
+            }
+
+            return anuncios.toArray(new String[0]);
 
         } catch (SQLException e) {
             System.err.println("Erro ao receber anuncios: " + e.getMessage());
+            e.printStackTrace();
             return new String[] { "Erro: " + e.getMessage() };
         }
     }

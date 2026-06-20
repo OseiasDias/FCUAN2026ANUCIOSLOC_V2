@@ -548,32 +548,9 @@ class _CadastroLocalScreenState extends State<CadastroLocalScreen> {
       );
     }
 
-    if (_meusLocais.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(
-          child: Column(
-            children: [
-              Icon(Icons.location_off, size: 48, color: Colors.grey),
-              SizedBox(height: 8),
-              Text('Nenhum local cadastrado',
-                  style: TextStyle(color: Colors.grey)),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            'Meus Locais',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
         const SizedBox(height: 8),
         ListView.builder(
           shrinkWrap: true,
