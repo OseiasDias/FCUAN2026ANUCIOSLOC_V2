@@ -26,7 +26,6 @@ dependencies:
   geolocator: 11.1.0
   google_maps_flutter: 2.9.0
   geocoding: 3.0.0
-  
   # Gerenciamento de estado
   provider: 6.1.2
   
