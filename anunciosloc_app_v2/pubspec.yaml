@@ -26,13 +26,14 @@ dependencies:
   geolocator: 11.1.0
   google_maps_flutter: 2.9.0
   geocoding: 3.0.0
+  
   # Gerenciamento de estado
   provider: 6.1.2
   
   # Animacoes de loading
   loading_animation_widget: 1.2.1
   
-  # Rede e Conectividade (alternativa sem wifi_iot)
+  # Rede e Conectividade
   network_info_plus: 6.0.1
   connectivity_plus: 6.0.3
   

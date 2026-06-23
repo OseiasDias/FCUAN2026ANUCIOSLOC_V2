@@ -9,6 +9,7 @@ import 'login_screen.dart';
 import 'meus_anuncios_screen.dart';
 import 'locais_screen.dart';
 import 'entrega_screen.dart';
+import 'wifi_direct_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -285,6 +286,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             context,
                             MaterialPageRoute(
                                 builder: (_) => const LocaisScreen()),
+                          );
+                        },
+                      ),
+                      // No grid de botões, adicionar:
+                      _botaoMenu(
+                        icone: Icons.wifi,
+                        titulo: 'WiFi Direct',
+                        subtitulo: 'Anúncios P2P',
+                        cor: Colors.deepPurple,
+                        aoClicar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const WifiDirectScreen()),
                           );
                         },
                       ),

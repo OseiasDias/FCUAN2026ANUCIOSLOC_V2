@@ -120,13 +120,13 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
               'Permissão de localização bloqueada permanentemente.\nSelecione um local manualmente.';
         });
         return;
-      }
+      } 
 
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 40),
       );
-
+  
       setState(() {
         _posicaoAtual = position;
         _obtendoLocalizacao = false;
