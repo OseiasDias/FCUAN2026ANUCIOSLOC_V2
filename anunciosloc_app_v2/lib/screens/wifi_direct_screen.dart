@@ -215,7 +215,7 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        // Tab 1: Dispositivos
+                        // TAB 1: DISPOSITIVOS
                         _dispositivos.isEmpty
                             ? Center(
                                 child: Column(
@@ -240,35 +240,68 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
                                 itemBuilder: (context, index) {
                                   final device = _dispositivos[index];
                                   return Card(
-                                    child: ListTile(
-                                      title:
-                                          Text(device['ssid'] ?? 'Dispositivo'),
-                                      subtitle: Text(
-                                          'Sinal: ${device['signalStrength']} dBm'),
-                                      trailing: ElevatedButton(
-                                        onPressed: _wifiService.isConnected
-                                            ? null
-                                            : () => _conectar(device['ssid']),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              _wifiService.isConnected
-                                                  ? Colors.green
-                                                  : Colors.deepPurple,
-                                        ),
-                                        child: Text(
-                                          _wifiService.isConnected
-                                              ? 'Conectado'
-                                              : 'Conectar',
-                                          style: const TextStyle(
-                                              color: Colors.white),
-                                        ),
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  device['ssid'] ??
+                                                      'Dispositivo',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Sinal: ${device['signalStrength']} dBm',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 100,
+                                            height: 40,
+                                            child: ElevatedButton(
+                                              onPressed: _wifiService
+                                                      .isConnected
+                                                  ? null
+                                                  : () =>
+                                                      _conectar(device['ssid']),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    _wifiService.isConnected
+                                                        ? Colors.green
+                                                        : Colors.deepPurple,
+                                                padding: EdgeInsets.zero,
+                                              ),
+                                              child: Text(
+                                                _wifiService.isConnected
+                                                    ? 'Conectado'
+                                                    : 'Conectar',
+                                                style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   );
                                 },
                               ),
 
-                        // Tab 2: Anúncios P2P
+                        // TAB 2: ANÚNCIOS P2P
                         _anuncios.isEmpty
                             ? Center(
                                 child: Column(
@@ -296,16 +329,54 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
                                   final anuncio = _anuncios[index];
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 8),
-                                    child: ListTile(
-                                      title: Text(
-                                        anuncio.titulo,
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      subtitle: Column(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.all(8),
+                                                decoration: BoxDecoration(
+                                                  color: anuncio.saltos > 0
+                                                      ? Colors.orange.shade100
+                                                      : Colors
+                                                          .deepPurple.shade100,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  anuncio.saltos > 0
+                                                      ? '📦'
+                                                      : '📡',
+                                                  style: const TextStyle(
+                                                      fontSize: 18),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  anuncio.titulo,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.visibility),
+                                                onPressed: () {
+                                                  _mostrarDetalhesAnuncio(
+                                                      anuncio);
+                                                },
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
                                           Text('Autor: ${anuncio.autor}'),
                                           Text('Local: ${anuncio.local}'),
                                           if (anuncio.saltos > 0)
@@ -313,12 +384,6 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
                                           Text(
                                               'Data: ${anuncio.dataCriacao.toString().substring(0, 16)}'),
                                         ],
-                                      ),
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.visibility),
-                                        onPressed: () {
-                                          _mostrarDetalhesAnuncio(anuncio);
-                                        },
                                       ),
                                     ),
                                   );
