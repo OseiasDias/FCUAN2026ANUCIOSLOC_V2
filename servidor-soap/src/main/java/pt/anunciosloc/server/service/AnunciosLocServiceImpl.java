@@ -797,4 +797,102 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
         }
     }
 
+    @Override
+public String[] receberAnunciosPorLocalizacao(String email, double latitude, double longitude) {
+    System.out.println("=== RECEBER ANUNCIOS POR LOCALIZACAO ===");
+    System.out.println("Email: " + email);
+    System.out.println("Latitude: " + latitude);
+    System.out.println("Longitude: " + longitude);
+
+    try {
+        // 1. Verificar se o utilizador existe
+        Utilizador u = utilizadorRepo.buscarPorEmail(email);
+        if (u == null || !u.isAtivo()) {
+            return new String[] { "Erro: Utilizador nao encontrado: " + email };
+        }
+
+        // 2. Buscar TODOS os locais (com raio)
+        List<Infraestrutura> locais = infraRepo.listarTodas();  // ← JÁ TEM RAIO!
+        
+        System.out.println("📍 Total de locais encontrados: " + locais.size());
+
+        // 3. Encontrar o local onde o utilizador está
+        Infraestrutura localEncontrado = null;
+        double distanciaMinima = Double.MAX_VALUE;
+        
+        for (Infraestrutura local : locais) {
+            double distancia = calcularDistancia(
+                latitude, longitude,
+                local.getLatitude(), local.getLongitude()
+            );
+            
+            double raio = local.getRaio();  // ← AGORA FUNCIONA!
+            
+            System.out.println("📏 Distancia para " + local.getNome() + 
+                             ": " + String.format("%.2f", distancia) + "m (raio: " + raio + "m)");
+            
+            if (distancia <= raio && distancia < distanciaMinima) {
+                distanciaMinima = distancia;
+                localEncontrado = local;
+            }
+        }
+
+        if (localEncontrado == null) {
+            return new String[] { "Nenhum local encontrado para as coordenadas fornecidas." };
+        }
+
+        System.out.println("✅ Local detectado: " + localEncontrado.getNome() + 
+                          " (distancia: " + String.format("%.2f", distanciaMinima) + "m)");
+
+        // 4. Buscar anúncios do local
+        String sqlAnuncios = "SELECT a.id, a.titulo, a.descricao, u.email as autor_email, a.data_criacao " +
+                            "FROM anuncios a " +
+                            "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                            "WHERE a.local_id = ? " +
+                            "AND a.activo = 1 " +
+                            "AND a.data_expiracao > NOW() " +
+                            "AND u.email != ? " +
+                            "ORDER BY a.data_criacao DESC";
+
+        List<String> anuncios = new ArrayList<>();
+
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sqlAnuncios)) {
+            
+            stmt.setLong(1, localEncontrado.getId());
+            stmt.setString(2, email);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                String mensagem = rs.getString("titulo") + "|" +
+                                  rs.getString("descricao") + "|" +
+                                  rs.getString("autor_email") + "|" +
+                                  rs.getTimestamp("data_criacao").toString();
+                anuncios.add(mensagem);
+            }
+        }
+
+        System.out.println(" Total de anuncios encontrados: " + anuncios.size());
+        return anuncios.toArray(new String[0]);
+
+    } catch (SQLException e) {
+        System.err.println(" Erro ao receber anuncios: " + e.getMessage());
+        return new String[] { "Erro: " + e.getMessage() };
+    }
+}
+    // Método para calcular distância (Haversine)
+    private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
+        final int RAIO_TERRA = 6371000; // metros
+
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return RAIO_TERRA * c;
+    }
 }

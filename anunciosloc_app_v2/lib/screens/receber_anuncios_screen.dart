@@ -234,9 +234,10 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
     final email = await Preferencias.getEmail();
 
     try {
-      final mensagens = await ApiService.receberAnunciosDeOutros(
+      final mensagens = await ApiService.receberAnunciosPorLocalizacao(
         email: email,
-        local: local,
+        latitude: _posicaoAtual!.latitude,
+        longitude: _posicaoAtual!.longitude,
       );
 
       print("Mensagens recebidas: ${mensagens.length}");

@@ -1202,4 +1202,44 @@ class ApiService {
       return [];
     }
   }
+
+  static Future<List<String>> receberAnunciosPorLocalizacao({
+    required String email,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final envelope = '''<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:ns="${Constantes.namespace}">
+  <soap:Body>
+    <ns:receberAnunciosPorLocalizacao>
+      <email>$email</email>
+      <latitude>$latitude</latitude>
+      <longitude>$longitude</longitude>
+    </ns:receberAnunciosPorLocalizacao>
+  </soap:Body>
+</soap:Envelope>''';
+
+      final response = await http
+          .post(
+            Uri.parse(Constantes.urlApi),
+            headers: {'Content-Type': 'text/xml'},
+            body: envelope,
+          )
+          .timeout(const Duration(seconds: Constantes.tempoEspera));
+
+      if (response.statusCode == 200) {
+        final doc = XmlDocument.parse(response.body);
+        final returnElement = doc.findAllElements('return').firstOrNull;
+        if (returnElement == null) return [];
+        final items = returnElement.findAllElements('item');
+        return items.map((e) => e.innerText).toList();
+      }
+      return [];
+    } catch (e) {
+      print("Erro: $e");
+      return [];
+    }
+  }
 }

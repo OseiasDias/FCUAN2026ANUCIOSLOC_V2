@@ -162,4 +162,9 @@ public interface AnunciosLocService {
                         @WebParam(name = "descricao") String descricao,
                         @WebParam(name = "local") String local,
                         @WebParam(name = "diasValidade") int diasValidade);
+
+        @WebMethod
+String[] receberAnunciosPorLocalizacao(@WebParam(name = "email") String email,
+                                       @WebParam(name = "latitude") double latitude,
+                                       @WebParam(name = "longitude") double longitude);
 }

@@ -49,100 +49,66 @@ public class InfraestruturaRepository {
     // ==================== BUSCAR ====================
 
     public Infraestrutura buscarPorNome(String nome) throws SQLException {
-        // 1. Tentar buscar na tabela locais primeiro (mais comum)
-        String sqlLocais = "SELECT l.*, i.id as infra_id, i.nome as infra_nome, " +
-                "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
-                "FROM locais l " +
-                "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id " +
-                "WHERE LOWER(TRIM(l.nome)) = LOWER(TRIM(?))";
-
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sqlLocais)) {
-
-            stmt.setString(1, nome);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                Infraestrutura infra = new Infraestrutura();
-                infra.setNome(rs.getString("nome"));
-                infra.setLocalizacao(rs.getString("nome"));
-                infra.setLatitude(rs.getDouble("latitude"));
-                infra.setLongitude(rs.getDouble("longitude"));
-                // infra.setRaio(rs.getDouble("raio")); ← REMOVER ESTA LINHA
-
-                // Dados da infraestrutura (se existir)
-                try {
-                    infra.setId(rs.getLong("infra_id"));
-                    infra.setCapacidade(rs.getInt("capacidade"));
-                    infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
-                    infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
-                    infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
-                } catch (SQLException e) {
-                    infra.setCapacidade(100);
-                    infra.setUtilizadoresConectados(0);
-                    infra.setTotalEntregas(0);
-                    infra.setTotalAnuncios(0);
-                }
-
-                infra.setAtivo(true);
-                return infra;
-            }
+    // ✅ INCLUIR O RAIO NO SELECT!
+    String sql = "SELECT l.id, l.nome, l.latitude, l.longitude, l.raio, " +
+                 "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
+                 "FROM locais l " +
+                 "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id " +
+                 "WHERE LOWER(TRIM(l.nome)) = LOWER(TRIM(?))";
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        
+        stmt.setString(1, nome);
+        ResultSet rs = stmt.executeQuery();
+        
+        if (rs.next()) {
+            Infraestrutura infra = new Infraestrutura();
+            infra.setId(rs.getLong("id"));
+            infra.setNome(rs.getString("nome"));
+            infra.setLatitude(rs.getDouble("latitude"));
+            infra.setLongitude(rs.getDouble("longitude"));
+            infra.setRaio(rs.getDouble("raio"));  // ← ADICIONAR!
+            infra.setCapacidade(rs.getInt("capacidade"));
+            infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
+            infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
+            infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
+            infra.setAtivo(true);
+            return infra;
         }
-
-        // 2. Se não encontrou, tentar buscar na tabela infraestruturas
-        String sqlInfra = "SELECT i.*, l.latitude, l.longitude FROM infraestruturas i " +
-                "LEFT JOIN locais l ON i.id = l.infraestrutura_id " +
-                "WHERE LOWER(TRIM(i.nome)) = LOWER(TRIM(?))";
-
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sqlInfra)) {
-
-            stmt.setString(1, nome);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                Infraestrutura infra = new Infraestrutura();
-                infra.setNome(rs.getString("nome"));
-                infra.setCapacidade(rs.getInt("capacidade"));
-                infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
-                infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
-                infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
-
-                try {
-                    infra.setLatitude(rs.getDouble("latitude"));
-                    infra.setLongitude(rs.getDouble("longitude"));
-                } catch (SQLException e) {
-                    infra.setLatitude(0.0);
-                    infra.setLongitude(0.0);
-                }
-
-                infra.setAtivo(true);
-                System.out.println("Local encontrado na tabela infraestruturas: " + nome);
-                return infra;
-            }
-        }
-
-        System.out.println("Local nao encontrado: " + nome);
-        return null;
     }
-
+    return null;
+}
     public List<Infraestrutura> listarTodas() throws SQLException {
-        String sql = "SELECT i.*, l.latitude, l.longitude FROM infraestruturas i " +
-                "JOIN locais l ON i.id = l.infraestrutura_id";
-
-        List<Infraestrutura> lista = new ArrayList<>();
-
-        try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql);
-                ResultSet rs = stmt.executeQuery()) {
-
-            while (rs.next()) {
-                lista.add(mapearInfraestrutura(rs));
-            }
+    //  INCLUIR O RAIO NO SELECT!
+    String sql = "SELECT l.id, l.nome, l.latitude, l.longitude, l.raio, " +
+                 "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
+                 "FROM locais l " +
+                 "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id";
+    
+    List<Infraestrutura> lista = new ArrayList<>();
+    
+    try (Connection conn = ConnectionFactory.getConnection();
+         PreparedStatement stmt = conn.prepareStatement(sql);
+         ResultSet rs = stmt.executeQuery()) {
+        
+        while (rs.next()) {
+            Infraestrutura infra = new Infraestrutura();
+            infra.setId(rs.getLong("id"));
+            infra.setNome(rs.getString("nome"));
+            infra.setLatitude(rs.getDouble("latitude"));
+            infra.setLongitude(rs.getDouble("longitude"));
+            infra.setRaio(rs.getDouble("raio"));  // ← ADICIONAR!
+            infra.setCapacidade(rs.getInt("capacidade"));
+            infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
+            infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
+            infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
+            infra.setAtivo(true);
+            lista.add(infra);
         }
-        return lista;
     }
-
+    return lista;
+}
     public Infraestrutura buscarPorId(Long id) throws SQLException {
         String sql = "SELECT i.*, l.latitude, l.longitude FROM infraestruturas i " +
                 "JOIN locais l ON i.id = l.infraestrutura_id " +
