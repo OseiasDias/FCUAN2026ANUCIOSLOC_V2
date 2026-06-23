@@ -99,6 +99,6 @@ public class Utilizador implements Serializable {
     
     public boolean podePublicarAnuncio() {
         if (ultimoAnuncio == null) return true;
-        return java.time.Duration.between(ultimoAnuncio, LocalDateTime.now()).toMinutes() >= 5;
+        return java.time.Duration.between(ultimoAnuncio, LocalDateTime.now()).toMinutes() >= 1;
     }
 }

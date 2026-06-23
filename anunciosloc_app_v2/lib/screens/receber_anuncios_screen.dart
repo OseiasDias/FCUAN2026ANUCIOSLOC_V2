@@ -124,7 +124,7 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
 
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 40),
       );
 
       setState(() {
@@ -796,4 +796,6 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
       ),
     );
   }
+
+  
 }
