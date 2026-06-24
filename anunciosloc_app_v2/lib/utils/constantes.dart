@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 
 class Constantes {
   // ==================== URLs DOS SERVIDORES ====================
-  static const String ipServidor = '192.168.8.143';
+  static const String ipServidor = '10.100.183.128';
   //static const String ipServidor = '192.168.8.119';
   //static const String ipServidor = 'localhost';
 
   // Para emulador Android usar: 10.0.2.2
   // static const String ipServidor = '10.0.2.2';
-
   static const String portaApi = '8082';
   static const String portaAuth = '8085';
   static const String portaInfra = '8081';

@@ -570,68 +570,61 @@ class ApiService {
         final doc = XmlDocument.parse(response.body);
 
         final returnElement = doc.findAllElements('return').firstOrNull;
-
         if (returnElement == null) {
           print("Elemento return nao encontrado");
           return [];
         }
 
-        final items = returnElement.findAllElements('item');
         List<Map<String, dynamic>> locais = [];
 
-        for (var item in items) {
-          final texto = item.innerText;
-          print("Texto do local: $texto");
+        // ✅ CORREÇÃO: Extrair o texto de cada <item> e fazer split('|')
+        for (var item in returnElement.findAllElements('item')) {
+          final texto = item.innerText.trim();
+          print("📌 Texto do item: $texto");
 
           final partes = texto.split('|');
 
-          if (partes.length >= 6 && partes[1] == 'GPS') {
-            locais.add({
-              'nome': partes[0],
-              'tipo': partes[1],
-              'latitude': double.tryParse(partes[2]) ?? 0,
-              'longitude': double.tryParse(partes[3]) ?? 0,
-              'raio': double.tryParse(partes[4]) ?? 0,
-              'infraestrutura':
-                  partes.length > 5 ? partes[5] : 'Sem infraestrutura',
-            });
-          } else if (partes.length >= 4 && partes[1] == 'WIFI') {
-            locais.add({
-              'nome': partes[0],
-              'tipo': partes[1],
-              'wifiSsid': partes[2],
-              'infraestrutura':
-                  partes.length > 3 ? partes[3] : 'Sem infraestrutura',
-            });
-          } else if (partes.length >= 4) {
-            locais.add({
-              'nome': partes[0],
-              'tipo': 'GPS',
-              'latitude': double.tryParse(partes[1]) ?? 0,
-              'longitude': double.tryParse(partes[2]) ?? 0,
-              'capacidade': int.tryParse(partes[3]) ?? 0,
-            });
-          }
-        }
+          if (partes.length >= 6) {
+            final nome = partes[0].trim();
+            final tipo = partes[1].trim();
+            final latitude = double.tryParse(partes[2].trim()) ?? 0.0;
+            final longitude = double.tryParse(partes[3].trim()) ?? 0.0;
+            final raio = double.tryParse(partes[4].trim()) ?? 50.0;
+            final infraestrutura = partes.length > 5 ? partes[5].trim() : '';
 
-        print("Locais encontrados: ${locais.length}");
-        for (var local in locais) {
-          if (local['tipo'] == 'GPS') {
-            print(
-                "   - ${local['nome']}: GPS (${local['latitude']}, ${local['longitude']}) - ${local['infraestrutura']}");
+            print("📍 Local: $nome ($tipo)");
+            print("   - Lat: $latitude, Lon: $longitude, Raio: $raio");
+
+            if (tipo == 'GPS') {
+              locais.add({
+                'nome': nome,
+                'tipo': tipo,
+                'latitude': latitude,
+                'longitude': longitude,
+                'raio': raio,
+                'infraestrutura': infraestrutura,
+              });
+            } else if (tipo == 'WIFI') {
+              locais.add({
+                'nome': nome,
+                'tipo': tipo,
+                'wifi_ssid': partes[2].trim(),
+                'infraestrutura': infraestrutura,
+              });
+            }
           } else {
-            print(
-                "   - ${local['nome']}: WIFI (${local['wifiSsid']}) - ${local['infraestrutura']}");
+            print("⚠️ Formato inesperado: $partes");
           }
         }
 
+        print("✅ Locais carregados: ${locais.length}");
         return locais;
       }
 
       print("Status code: ${response.statusCode}");
       return [];
     } catch (e) {
-      print("Erro ao listar locais coordenadas: $e");
+      print(" Erro ao listar locais coordenadas: $e");
       return [];
     }
   }

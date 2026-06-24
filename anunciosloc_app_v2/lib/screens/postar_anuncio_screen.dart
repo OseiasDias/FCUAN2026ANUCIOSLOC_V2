@@ -223,10 +223,7 @@ class _PostarAnuncioScreenState extends State<PostarAnuncioScreen> {
         final mensagem = resultado['mensagem'] ?? 'Erro ao publicar anuncio';
 
         // Mensagens especificas para cada tipo de erro
-        if (mensagem.contains('Aguarde 5 minutos')) {
-          _mostrarMensagem(' Aguarde 5 minutos entre cada publicacao!',
-              isErro: true);
-        } else if (mensagem.contains('Saldo insuficiente')) {
+        if (mensagem.contains('Saldo insuficiente')) {
           _mostrarMensagem(' Saldo insuficiente! Recarregue seus pontos.',
               isErro: true);
         } else if (mensagem.contains('Local nao encontrado')) {

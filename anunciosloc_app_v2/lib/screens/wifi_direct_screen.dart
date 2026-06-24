@@ -120,6 +120,10 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
     );
   }
 
+  void _abrirConfiguracoesWifi() {
+    _wifiService.abrirConfiguracoesWifiDirect();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,6 +135,12 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: _descobrirDispositivos,
+            tooltip: 'Procurar dispositivos',
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _abrirConfiguracoesWifi,
+            tooltip: 'Configuracoes WiFi',
           ),
         ],
       ),

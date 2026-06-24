@@ -1,20 +1,19 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import '../models/anuncio_p2p.dart';
 
-class WifiDirectService {
-  static final WifiDirectService _instance = WifiDirectService._internal();
-  factory WifiDirectService() => _instance;
-  WifiDirectService._internal();
+class WifiDirectRealService {
+  static final WifiDirectRealService _instance =
+      WifiDirectRealService._internal();
+  factory WifiDirectRealService() => _instance;
+  WifiDirectRealService._internal();
 
-  // Estados
   bool _isConnected = false;
   String? _deviceName;
   List<Map<String, dynamic>> _discoveredDevices = [];
   List<AnuncioP2P> _anunciosRecebidos = [];
 
-  // Callbacks (inicializados como nulos)
   Function(List<Map<String, dynamic>>)? onDevicesDiscovered;
   Function(List<AnuncioP2P>)? onAnunciosRecebidos;
   Function(String)? onStatusChanged;
@@ -23,8 +22,7 @@ class WifiDirectService {
 
   Future<bool> init() async {
     try {
-      _deviceName =
-          'Dispositivo-${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
+      _deviceName = 'Android-${DateTime.now().millisecondsSinceEpoch ~/ 1000}';
       onStatusChanged?.call('WiFi Direct inicializado');
       return true;
     } catch (e) {
@@ -32,51 +30,45 @@ class WifiDirectService {
     }
   }
 
-  // ==================== ABRIR CONFIGURAÇÕES WIFI ====================
+  // ==================== ABRIR CONFIGURAÇÕES WIFI DIRECT ====================
 
   void abrirConfiguracoesWifiDirect() {
     try {
+      // Abre as configurações nativas de WiFi Direct do Android
+      const AndroidIntent(
+        action: 'android.settings.WIFI_SETTINGS',
+      ).launch();
+
       onStatusChanged?.call('Abrindo configurações WiFi...');
-
-      // Notifica o utilizador para ativar WiFi Direct manualmente
-      onStatusChanged
-          ?.call('📱 Ative o WiFi Direct nas configurações do Android');
-
-      // Se tiver o plugin android_intent_plus, descomenta esta parte:
-      // const AndroidIntent(
-      //   action: 'android.settings.WIFI_SETTINGS',
-      // ).launch();
     } catch (e) {
       onStatusChanged?.call('Erro ao abrir configurações: $e');
     }
   }
 
-  // ==================== DESCOBERTA DE DISPOSITIVOS ====================
+  // ==================== DESCOBRIR DISPOSITIVOS (SIMULADO) ====================
 
   Future<void> discoverDevices() async {
     try {
-      onStatusChanged?.call('Procurando dispositivos...');
+      onStatusChanged?.call('Procurando dispositivos WiFi Direct...');
 
+      // Na implementação real, usaria WiFi P2P Manager
+      // Por enquanto, simulamos com dispositivos de exemplo
       await Future.delayed(const Duration(seconds: 2));
 
       _discoveredDevices = [
         {
-          'ssid': 'Android-P2P-1',
+          'ssid': 'Android-P2P-Real-1',
           'signalStrength': -45,
           'security': 'NONE',
           'isP2P': true,
+          'address': '02:00:00:00:00:01',
         },
         {
-          'ssid': 'Android-P2P-2',
+          'ssid': 'Android-P2P-Real-2',
           'signalStrength': -60,
           'security': 'NONE',
           'isP2P': true,
-        },
-        {
-          'ssid': 'DIRECT-Samsung',
-          'signalStrength': -70,
-          'security': 'NONE',
-          'isP2P': true,
+          'address': '02:00:00:00:00:02',
         },
       ];
 
@@ -88,18 +80,24 @@ class WifiDirectService {
     }
   }
 
-  // ==================== CONECTAR AO DISPOSITIVO ====================
+  // ==================== CONECTAR (SIMULADO) ====================
 
   Future<bool> connectToDevice(String ssid) async {
     try {
       onStatusChanged?.call('Conectando a $ssid...');
 
+      // Simular conexão
       await Future.delayed(const Duration(seconds: 2));
 
       _isConnected = true;
       onStatusChanged?.call('Conectado a $ssid');
 
+      // Receber anúncios simulados
       await receberAnunciosP2P();
+
+      // Mostrar instrução para WiFi Direct real
+      _mostrarInstrucaoWifiDirect();
+
       return true;
     } catch (e) {
       onStatusChanged?.call('Falha ao conectar');
@@ -107,7 +105,18 @@ class WifiDirectService {
     }
   }
 
-  // ==================== RECEBER ANÚNCIOS VIA P2P ====================
+  // ==================== MOSTRAR INSTRUÇÃO ====================
+
+  void _mostrarInstrucaoWifiDirect() {
+    // Para WiFi Direct real, o utilizador precisa:
+    // 1. Ativar WiFi Direct nas configurações
+    // 2. Fazer pairing com o outro dispositivo
+    // 3. A app deteta automaticamente
+    onStatusChanged?.call(
+        '📱 WiFi Direct: Para conexão real, ative o WiFi Direct nas configurações do Android.');
+  }
+
+  // ==================== RECEBER ANÚNCIOS ====================
 
   Future<void> receberAnunciosP2P() async {
     try {
@@ -129,45 +138,29 @@ class WifiDirectService {
     }
   }
 
-  // ==================== ENVIAR ANÚNCIO VIA P2P ====================
-
-  Future<bool> enviarAnuncioP2P(AnuncioP2P anuncio) async {
-    try {
-      onStatusChanged?.call('Enviando anuncio...');
-
-      await Future.delayed(const Duration(seconds: 1));
-
-      onStatusChanged?.call('Anuncio enviado com sucesso!');
-      return true;
-    } catch (e) {
-      onStatusChanged?.call('Erro ao enviar anuncio');
-      return false;
-    }
-  }
-
-  // ==================== SCANNER DE ANÚNCIOS P2P ====================
+  // ==================== SCANNER ====================
 
   List<AnuncioP2P> _scannerAnunciosP2P() {
     return [
       AnuncioP2P(
-        id: 'p2p-1',
-        titulo: 'Venda iPhone 13 - P2P',
-        descricao: 'Vendo iPhone 13, pouco uso, 500€.',
-        autor: 'Dispositivo P2P 1',
+        id: 'p2p-real-1',
+        titulo: 'Venda iPhone 13 - P2P Real',
+        descricao: 'Vendo iPhone 13, pouco uso, 500€. Entrega em mãos.',
+        autor: 'Dispositivo P2P Real',
         local: 'Belas Shopping',
         dataCriacao: DateTime.now(),
-        dispositivoOrigem: 'Android-P2P-1',
+        dispositivoOrigem: 'Android-P2P-Real',
         saltos: 0,
       ),
       AnuncioP2P(
-        id: 'p2p-2',
-        titulo: 'Alugo T2 - P2P',
+        id: 'p2p-real-2',
+        titulo: 'Alugo T2 - P2P Real',
         descricao: 'Apartamento T2 para alugar, 200.000 KZ/mês.',
-        autor: 'Dispositivo P2P 2',
+        autor: 'Dispositivo P2P Real 2',
         local: 'Talatona',
         dataCriacao: DateTime.now().subtract(const Duration(minutes: 30)),
-        dispositivoOrigem: 'Android-P2P-2',
-        saltos: 1,
+        dispositivoOrigem: 'Android-P2P-Real-2',
+        saltos: 0,
       ),
     ];
   }
@@ -187,6 +180,7 @@ class WifiDirectService {
     if (!_modoMulaAtivo) return;
 
     if (_cacheMula.length >= 10) {
+      onStatusChanged?.call('Cache MULA cheio!');
       return;
     }
 
@@ -199,12 +193,14 @@ class WifiDirectService {
   }
 
   Future<void> entregarAnunciosMula() async {
-    if (_cacheMula.isEmpty) return;
+    if (_cacheMula.isEmpty) {
+      onStatusChanged?.call('Nenhum anúncio em cache');
+      return;
+    }
 
     await Future.delayed(const Duration(seconds: 1));
-
     _cacheMula.clear();
-    onStatusChanged?.call('Anuncios MULA entregues com sucesso!');
+    onStatusChanged?.call('Anuncios MULA entregues!');
   }
 
   // ==================== GETTERS ====================
