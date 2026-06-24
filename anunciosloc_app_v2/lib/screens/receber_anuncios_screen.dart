@@ -120,13 +120,13 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
               'Permissão de localização bloqueada permanentemente.\nSelecione um local manualmente.';
         });
         return;
-      } 
+      }
 
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
         timeLimit: const Duration(seconds: 40),
       );
-  
+
       setState(() {
         _posicaoAtual = position;
         _obtendoLocalizacao = false;
@@ -216,7 +216,6 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
   double _toRadians(double degrees) => degrees * pi / 180;
 
   // ==================== BUSCAR ANÚNCIOS ====================
-
   Future<void> _buscarAnuncios() async {
     final local = _localSelecionado;
 
@@ -251,13 +250,37 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
       } else {
         setState(() {
           _carregando = false;
-          _anuncios = mensagens
-              .map((msg) => ({
-                    'conteudo': msg,
-                    'lido': false,
-                    'data': DateTime.now(),
-                  }))
-              .toList();
+          _anuncios = mensagens.map((msg) {
+            // ✅ REMOVER OS PIPES E FORMATAR
+            String conteudoFormatado = msg;
+
+            // Substituir | por quebra de linha
+            conteudoFormatado = conteudoFormatado.replaceAll('|', '\n');
+
+            // Remover tags XML se existirem
+            conteudoFormatado =
+                conteudoFormatado.replaceAll(RegExp(r'<[^>]*>'), '');
+
+            // Substituir \n literal por quebra real
+            conteudoFormatado = conteudoFormatado.replaceAll('\\n', '\n');
+
+            // Remover espaços extras no início/fim
+            conteudoFormatado = conteudoFormatado.trim();
+
+            // Extrair autor se existir no formato "nome|email"
+            String autor = _extrairAutor(msg);
+            String data = _extrairData(msg);
+
+            return {
+              'conteudo': conteudoFormatado,
+              'lido': false,
+              'data': data.isNotEmpty
+                  ? DateTime.tryParse(data) ?? DateTime.now()
+                  : DateTime.now(),
+              'autor': autor.isNotEmpty ? autor : 'Utilizador',
+              'local': local,
+            };
+          }).toList();
         });
       }
     } catch (e) {
@@ -269,6 +292,36 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
       });
     }
   }
+
+// ✅ EXTRAIR AUTOR DA MENSAGEM
+  String _extrairAutor(String mensagem) {
+    // Tentar extrair email do formato "nome|email|..."
+    final regex = RegExp(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})');
+    final match = regex.firstMatch(mensagem);
+    if (match != null) {
+      return match.group(1) ?? 'Utilizador';
+    }
+
+    // Tentar extrair nome antes do primeiro |
+    final partes = mensagem.split('|');
+    if (partes.isNotEmpty && partes[0].trim().isNotEmpty) {
+      return partes[0].trim();
+    }
+
+    return 'Utilizador';
+  }
+
+// ✅ EXTRAIR DATA DA MENSAGEM
+  String _extrairData(String mensagem) {
+    // Tentar extrair data no formato "2026-06-24 22:13:24.0"
+    final regex = RegExp(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})');
+    final match = regex.firstMatch(mensagem);
+    if (match != null) {
+      return match.group(1) ?? '';
+    }
+    return '';
+  }
+//  MÉTODO AUXILIAR PARA EXTRAIR O AUTOR
 
   void _mostrarMensagem(String msg, {bool isErro = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -285,94 +338,655 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
     setState(() {
       _anuncios[index]['lido'] = true;
     });
-    _mostrarMensagem('Marcado como lido');
+    _mostrarMensagem('Visto');
   }
 
-  void _mostrarDetalhesAnuncio(Map<String, dynamic> anuncio, int index) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Constantes.corPrincipal.withAlpha(25),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.announcement,
-                      color: Constantes.corPrincipal),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Anúncio de outro utilizador',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                      Text(
-                        'Recebido agora',
-                        style: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+  Widget _buildAnuncioCard(Map<String, dynamic> anuncio, int index) {
+    final isLido = anuncio['lido'] == true;
+    final conteudo = anuncio['conteudo'] ?? '';
+    final data = anuncio['data'] ?? DateTime.now();
+
+    final autor = anuncio['autor'] ?? 'Utilizador';
+    final local = anuncio['local'] ?? _localSelecionado ?? 'Local desconhecido';
+
+    final List<Color> cores = [
+      const Color(0xFFE8F5E9),
+      const Color(0xFFE3F2FD),
+      const Color(0xFFFCE4EC),
+      const Color(0xFFFFF3E0),
+      const Color(0xFFF3E5F5),
+      const Color(0xFFE0F7FA),
+    ];
+    final corFundo = cores[index % cores.length];
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(40),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        elevation: isLido ? 0 : 2,
+        borderRadius: BorderRadius.circular(16),
+        color: isLido ? Colors.grey[50] : Colors.white,
+        child: InkWell(
+          onTap: () => _mostrarDetalhesAnuncio(anuncio, index),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              color: isLido ? Colors.grey[50] : Colors.white,
             ),
-            const Divider(),
-            const SizedBox(height: 16),
-            Text(
-              anuncio['conteudo'],
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-            const SizedBox(height: 24),
-            Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _marcarComoLido(index);
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.done),
-                    label: const Text('Marcar como lido'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
+                // CABEÇALHO: Ícone + Autor + Data
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // CONTEÚDO DO ANÚNCIO - AGORA COM VÁRIAS LINHAS
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: corFundo,
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      child: Text(
+                        conteudo,
+                        style: TextStyle(
+                          fontSize: 15,
+                          height: 1.6,
+                          fontWeight:
+                              isLido ? FontWeight.normal : FontWeight.w500,
+                          color: isLido ? Colors.grey[700] : Colors.black87,
+                        ),
+                        maxLines: 5, // Mostra até 5 linhas
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true, //  Permite quebra de linha
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  autor,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: isLido
+                                        ? Colors.grey[600]
+                                        : Colors.black87,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (!isLido) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withAlpha(30),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'NOVO',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          // ✅ CORREÇÃO: Wrap para evitar overflow
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 2,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  const SizedBox(width: 2),
+                                  ConstrainedBox(
+                                    constraints:
+                                        const BoxConstraints(maxWidth: 120),
+                                    child: Text(
+                                      local,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey[500],
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.access_time,
+                                    size: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    _formatarData(data),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!isLido)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(top: 4),
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                // CONTEÚDO DO ANÚNCIO
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: corFundo,
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Text(
+                    conteudo,
+                    style: TextStyle(
+                      fontSize: 15,
+                      height: 1.6,
+                      fontWeight: isLido ? FontWeight.normal : FontWeight.w500,
+                      color: isLido ? Colors.grey[700] : Colors.black87,
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // RODAPÉ: Ações
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (isLido)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withAlpha(20),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              size: 14,
+                              color: Colors.green[600],
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Lido',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.green[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Constantes.corPrincipal.withAlpha(15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.visibility,
+                            size: 14,
+                            color: Constantes.corPrincipal.withAlpha(150),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Ver detalhes',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Constantes.corPrincipal.withAlpha(150),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // ==================== BUILD ====================
+  String _formatarData(DateTime data) {
+    final now = DateTime.now();
+    final diff = now.difference(data);
+
+    if (diff.inDays == 0) {
+      if (diff.inHours == 0) {
+        if (diff.inMinutes < 5) return 'Agora mesmo';
+        return '${diff.inMinutes} min atrás';
+      }
+      return '${diff.inHours}h atrás';
+    } else if (diff.inDays == 1) {
+      return 'Ontem às ${_formatarHora(data)}';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} dias atrás';
+    } else {
+      return '${data.day}/${data.month}/${data.year} ${_formatarHora(data)}';
+    }
+  }
+
+  String _formatarHora(DateTime data) {
+    return '${data.hour.toString().padLeft(2, '0')}:${data.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _mostrarDetalhesAnuncio(Map<String, dynamic> anuncio, int index) {
+    final isLido = anuncio['lido'] == true;
+    final conteudo = anuncio['conteudo'] ?? '';
+    final autor = anuncio['autor'] ?? 'Utilizador';
+    final local = anuncio['local'] ?? _localSelecionado ?? 'Local desconhecido';
+    final data = anuncio['data'] ?? DateTime.now();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        expand: false,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Cabeçalho
+              Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Constantes.corPrincipal,
+                          Constantes.corPrincipal.withAlpha(180),
+                        ],
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.announcement,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Anúncio de outro utilizador',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          autor,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        // ✅ CORREÇÃO: Wrap em vez de Row
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 2,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: 14,
+                                  color: Colors.grey[500],
+                                ),
+                                const SizedBox(width: 4),
+                                ConstrainedBox(
+                                  constraints:
+                                      const BoxConstraints(maxWidth: 120),
+                                  child: Text(
+                                    local,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: 14,
+                                  color: Colors.grey[500],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _formatarData(data),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+
+              const Divider(height: 20),
+
+              // Conteúdo do anúncio
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: Text(
+                          conteudo,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.8,
+                          ),
+                          softWrap: true,
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // ✅ CORREÇÃO: Row com Expanded
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.remove_red_eye,
+                                    color: Colors.blue[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '0',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[700],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Visualizações',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.share,
+                                    color: Colors.green[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '0',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green[700],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Compartilhamentos',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.green[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.orange[50],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.favorite,
+                                    color: Colors.orange[700],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '0',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange[700],
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Interesses',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.orange[700],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Botões
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () {},
+                              icon: const Icon(Icons.share, size: 18),
+                              label: const Text('Compartilhar'),
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                _marcarComoLido(index);
+                                Navigator.pop(context);
+                              },
+                              icon: const Icon(Icons.done, size: 18),
+                              label: const Text('Marcar como lido'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Fechar',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -796,6 +1410,4 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
       ),
     );
   }
-
-  
 }
