@@ -12,9 +12,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # WiFi Direct
+  # WiFi Direct (escolhe apenas UM)
   android_intent_plus: ^5.1.0
   wifi_iot: ^0.3.0
+  # wifi_direct: ^0.0.3  # ← REMOVE ESTA! Está obsoleta
+  # wifidirect: ^0.1.0   # ← REMOVE ESTA! Está obsoleta
 
   # UI e Icones
   cupertino_icons: 1.0.8

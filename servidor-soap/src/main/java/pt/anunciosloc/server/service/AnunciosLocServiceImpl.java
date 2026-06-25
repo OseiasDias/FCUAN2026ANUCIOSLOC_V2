@@ -198,11 +198,7 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
                 return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
             }
 
-            // REMOVER a verificação do timer de 5 minutos
-            // if (!u.podePublicarAnuncio()) {
-            // return "Aguarde 5 minutos para publicar outro anuncio.";
-            // }
-
+            
             // Debitar saldo
             boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
             if (!debitado) {
@@ -749,10 +745,7 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
                 return "Erro: Saldo insuficiente! Necessario 5 pontos para publicar. Seu saldo: " + (int) u.getSaldo();
             }
 
-            // 7. Verificar tempo desde o ultimo anuncio (minimo 5 minutos)
-            if (!u.podePublicarAnuncio()) {
-                return "Erro: Aguarde 5 minutos para publicar outro anuncio.";
-            }
+          
 
             // 8. Verificar se o local existe
             Infraestrutura infra = infraRepo.buscarPorNome(local);
