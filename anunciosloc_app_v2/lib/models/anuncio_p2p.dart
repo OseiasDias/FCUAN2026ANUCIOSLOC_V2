@@ -6,7 +6,7 @@ class AnuncioP2P {
   final String local;
   final DateTime dataCriacao;
   final String dispositivoOrigem;
-  final int saltos; // Para rastrear o número de saltos (MULA)
+  final int saltos;
 
   AnuncioP2P({
     required this.id,

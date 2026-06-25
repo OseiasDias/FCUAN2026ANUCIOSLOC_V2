@@ -345,10 +345,10 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
     final isLido = anuncio['lido'] == true;
     final conteudo = anuncio['conteudo'] ?? '';
     final data = anuncio['data'] ?? DateTime.now();
-
     final autor = anuncio['autor'] ?? 'Utilizador';
     final local = anuncio['local'] ?? _localSelecionado ?? 'Local desconhecido';
 
+    // Cores alternadas para fundo
     final List<Color> cores = [
       const Color(0xFFE8F5E9),
       const Color(0xFFE3F2FD),
@@ -388,29 +388,24 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // CABEÇALHO: Ícone + Autor + Data
+                // ==================== CABEÇALHO ====================
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // CONTEÚDO DO ANÚNCIO - AGORA COM VÁRIAS LINHAS
+                    // Ícone do autor
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: corFundo,
-                        borderRadius: BorderRadius.circular(12),
+                        color: isLido
+                            ? Colors.grey[300]
+                            : Constantes.corPrincipal.withAlpha(20),
+                        shape: BoxShape.circle,
                       ),
-                      child: Text(
-                        conteudo,
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.6,
-                          fontWeight:
-                              isLido ? FontWeight.normal : FontWeight.w500,
-                          color: isLido ? Colors.grey[700] : Colors.black87,
-                        ),
-                        maxLines: 5, // Mostra até 5 linhas
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: true, //  Permite quebra de linha
+                      child: Icon(
+                        Icons.person,
+                        color:
+                            isLido ? Colors.grey[500] : Constantes.corPrincipal,
+                        size: 22,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -457,9 +452,9 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
                             ],
                           ),
                           const SizedBox(height: 2),
-                          // ✅ CORREÇÃO: Wrap para evitar overflow
+                          // Local e Data com ícones
                           Wrap(
-                            spacing: 8,
+                            spacing: 12,
                             runSpacing: 2,
                             children: [
                               Row(
@@ -470,10 +465,10 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
                                     size: 12,
                                     color: Colors.grey[500],
                                   ),
-                                  const SizedBox(width: 2),
+                                  const SizedBox(width: 4),
                                   ConstrainedBox(
                                     constraints:
-                                        const BoxConstraints(maxWidth: 120),
+                                        const BoxConstraints(maxWidth: 100),
                                     child: Text(
                                       local,
                                       style: TextStyle(
@@ -494,7 +489,7 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
                                     size: 12,
                                     color: Colors.grey[500],
                                   ),
-                                  const SizedBox(width: 2),
+                                  const SizedBox(width: 4),
                                   Text(
                                     _formatarData(data),
                                     style: TextStyle(
@@ -524,29 +519,78 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
 
                 const SizedBox(height: 12),
 
-                // CONTEÚDO DO ANÚNCIO
+                // ==================== CONTEÚDO DO ANÚNCIO COM ÍCONES ====================
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: corFundo,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    conteudo,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.6,
-                      fontWeight: isLido ? FontWeight.normal : FontWeight.w500,
-                      color: isLido ? Colors.grey[700] : Colors.black87,
-                    ),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Título (primeira linha)
+                      _buildLinhaComIcone(
+                        icone: Icons.label,
+                        corIcone: Colors.blue,
+                        texto: _extrairTitulo(conteudo),
+                        estilo: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+
+                      // Descrição (segunda linha)
+                      if (_extrairDescricao(conteudo).isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildLinhaComIcone(
+                          icone: Icons.description,
+                          corIcone: Colors.green,
+                          texto: _extrairDescricao(conteudo),
+                          estilo: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[800],
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+
+                      // Autor (terceira linha)
+                      if (_extrairAutorDoConteudo(conteudo).isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _buildLinhaComIcone(
+                          icone: Icons.email,
+                          corIcone: Colors.orange,
+                          texto: _extrairAutorDoConteudo(conteudo),
+                          estilo: TextStyle(
+                            fontSize: 13,
+                            color: Colors.blue[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+
+                      // Data (quarta linha)
+                      if (_extrairDataDoConteudo(conteudo).isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        _buildLinhaComIcone(
+                          icone: Icons.calendar_today,
+                          corIcone: Colors.purple,
+                          texto: _extrairDataDoConteudo(conteudo),
+                          estilo: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
 
                 const SizedBox(height: 12),
 
-                // RODAPÉ: Ações
+                // ==================== RODAPÉ ====================
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -618,6 +662,91 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
         ),
       ),
     );
+  }
+
+// ==================== MÉTODOS AUXILIARES ====================
+
+  Widget _buildLinhaComIcone({
+    required IconData icone,
+    required Color corIcone,
+    required String texto,
+    required TextStyle estilo,
+  }) {
+    if (texto.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icone,
+          size: 16,
+          color: corIcone,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            texto,
+            style: estilo,
+            softWrap: true,
+          ),
+        ),
+      ],
+    );
+  }
+
+// Extrair Título (primeira linha)
+  String _extrairTitulo(String conteudo) {
+    final linhas =
+        conteudo.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    if (linhas.isNotEmpty) {
+      // Tentar encontrar a primeira linha que não parece email ou data
+      for (var linha in linhas) {
+        final trimmed = linha.trim();
+        if (!trimmed.contains('@') &&
+            !RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(trimmed)) {
+          return trimmed;
+        }
+      }
+      return linhas.first.trim();
+    }
+    return conteudo;
+  }
+
+// Extrair Descrição (segunda linha)
+  String _extrairDescricao(String conteudo) {
+    final linhas =
+        conteudo.split('\n').where((l) => l.trim().isNotEmpty).toList();
+    for (var linha in linhas) {
+      final trimmed = linha.trim();
+      if (!trimmed.contains('@') &&
+          !RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(trimmed)) {
+        // Pular a primeira linha (título) e pegar a próxima
+        final index = linhas.indexOf(linha);
+        if (index + 1 < linhas.length) {
+          final next = linhas[index + 1].trim();
+          if (!next.contains('@') &&
+              !RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(next)) {
+            return next;
+          }
+        }
+        return '';
+      }
+    }
+    return '';
+  }
+
+// Extrair Autor (email)
+  String _extrairAutorDoConteudo(String conteudo) {
+    final regex = RegExp(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})');
+    final match = regex.firstMatch(conteudo);
+    return match?.group(1) ?? '';
+  }
+
+// Extrair Data
+  String _extrairDataDoConteudo(String conteudo) {
+    final regex = RegExp(r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})');
+    final match = regex.firstMatch(conteudo);
+    return match?.group(1) ?? '';
   }
 
   String _formatarData(DateTime data) {

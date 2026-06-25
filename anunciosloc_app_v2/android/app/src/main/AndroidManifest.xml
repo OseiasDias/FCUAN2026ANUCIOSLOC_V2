@@ -1,30 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- ========== PERMISSOES NECESSARIAS ========== -->
-    <!-- Internet -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    
-    <!-- Localizacao (GPS) -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    
-    <!-- WiFi -->
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-
-    <!-- Permissões para WiFi Direct -->
- 
-      <!-- Permissões WiFi Direct -->
+    <!-- ========== PERMISSOES WIFI DIRECT ========== -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <!-- ========== LOCALIZACAO (GPS) ========== -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <!-- WiFi Direct -->
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    
+    <!-- ========== ANDROID 14+ (API 33+) ========== -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
     
     <application
         android:label="anunciosloc_app_v2"
@@ -32,7 +19,7 @@
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
         
-        <!-- Google Maps API Key (opcional, para mapas) -->
+        <!-- Google Maps API Key -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyA67w2HDE-FGi0MI62-SyRGaOa_DQkxfoU" />
