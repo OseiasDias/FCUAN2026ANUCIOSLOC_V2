@@ -1,0 +1,66 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+:root {
+  --primary: #6200EE;
+  --primary-dark: #4A00B5;
+  --secondary: #03DAC5;
+  --danger: #DC3545;
+  --success: #28A745;
+  --warning: #FFC107;
+  --sidebar-bg: #1a1a2e;
+  --sidebar-text: #e0e0e0;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f4f6f9;
+  color: #333;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
+}
+
+/* Utilitários */
+.text-primary-custom {
+  color: var(--primary) !important;
+}
+
+.bg-primary-custom {
+  background-color: var(--primary) !important;
+}
+
+.btn-primary-custom {
+  background-color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.btn-primary-custom:hover {
+  background-color: var(--primary-dark) !important;
+  border-color: var(--primary-dark) !important;
+}

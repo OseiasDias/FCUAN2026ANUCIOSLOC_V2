@@ -1,0 +1,29 @@
+.dashboard-container {
+  min-height: 100vh;
+  background-color: #f4f6f9;
+  margin-left: 250px;
+  padding: 20px;
+}
+
+.dashboard-container .card {
+  border: none;
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-container .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+.dashboard-container .card-header {
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    margin-left: 0;
+    padding: 12px;
+  }
+}

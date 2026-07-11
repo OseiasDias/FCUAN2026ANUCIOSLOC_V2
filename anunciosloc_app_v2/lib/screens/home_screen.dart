@@ -10,6 +10,7 @@ import 'meus_anuncios_screen.dart';
 import 'locais_screen.dart';
 import 'entrega_screen.dart';
 import 'wifi_direct_screen.dart';
+import 'teste_mula_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -300,6 +301,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             context,
                             MaterialPageRoute(
                                 builder: (_) => const WifiDirectScreen()),
+                          );
+                        },
+                      ),
+                      // No main.dart ou no menu principal, adiciona:
+                      ListTile(
+                        leading: Icon(Icons.swap_horiz, color: Colors.orange),
+                        title: Text('Testar MULA'),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => TesteMulaScreen()),
                           );
                         },
                       ),

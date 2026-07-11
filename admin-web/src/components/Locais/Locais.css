@@ -1,0 +1,23 @@
+.locais-container {
+  min-height: 100vh;
+  background-color: #f4f6f9;
+  margin-left: 250px;
+}
+
+.locais-container .local-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+  border: none;
+  border-radius: 12px;
+}
+
+.locais-container .local-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+@media (max-width: 768px) {
+  .locais-container {
+    margin-left: 0;
+    padding: 12px;
+  }
+}

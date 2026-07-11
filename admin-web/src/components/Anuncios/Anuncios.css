@@ -1,0 +1,27 @@
+.anuncios-container {
+  min-height: 100vh;
+  background-color: #f4f6f9;
+  margin-left: 250px;
+}
+
+.anuncios-container .card {
+  border: none;
+  border-radius: 12px;
+}
+
+.anuncios-container .table th {
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.anuncios-container .table td {
+  vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+  .anuncios-container {
+    margin-left: 0;
+    padding: 12px;
+  }
+}
