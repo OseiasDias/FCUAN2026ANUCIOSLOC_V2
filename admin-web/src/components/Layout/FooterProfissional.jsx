@@ -50,7 +50,7 @@ const FooterDashboard = () => {
 
           {/* Coluna 2 - Entidades do Sistema */}
           <div className="footer-col">
-            <h4 className="footer-title">📋 Entidades do Sistema</h4>
+            <h4 className="footer-title"> Entidades do Sistema</h4>
             <ul className="footer-entities">
               <li>
                 <FaUsers className="entity-icon" />
@@ -85,7 +85,7 @@ const FooterDashboard = () => {
 
           {/* Coluna 3 - Modos de Entrega */}
           <div className="footer-col">
-            <h4 className="footer-title">📡 Modos de Entrega</h4>
+            <h4 className="footer-title">Modos de Entrega</h4>
             <ul className="footer-modes">
               <li>
                 <FaServer className="mode-icon" style={{ color: '#6366F1' }} />
@@ -120,14 +120,13 @@ const FooterDashboard = () => {
 
           {/* Coluna 4 - Links Úteis */}
           <div className="footer-col">
-            <h4 className="footer-title">🔗 Links Úteis</h4>
+            <h4 className="footer-title">Links Úteis</h4>
             <ul className="footer-links">
               <li><a href="#">Dashboard</a></li>
               <li><a href="#">Utilizadores</a></li>
               <li><a href="#">Anúncios</a></li>
               <li><a href="#">Locais</a></li>
-              <li><a href="#">Estatísticas</a></li>
-              <li><a href="#">Configurações</a></li>
+              <li><a href="#">Assistência interativa</a></li>
             </ul>
           </div>
         </div>

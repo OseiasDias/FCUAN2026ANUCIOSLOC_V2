@@ -11,7 +11,8 @@ import {
   FaChevronRight,
   FaSignOutAlt,
   FaUserCircle,
-  FaChartLine
+  FaChartLine,
+  FaHandsHelping
 } from "react-icons/fa";
 import { Modal } from "react-bootstrap";
 import { toast } from "react-hot-toast";
@@ -26,8 +27,7 @@ const menuItems = [
   { name: "Utilizadores", path: "/utilizadores", icon: <FaUsers />, badge: "12" },
   { name: "Anúncios", path: "/anuncios", icon: <FaBullhorn />, badge: "5" },
   { name: "Locais", path: "/locais", icon: <FaMapMarkedAlt />, badge: null },
-  { name: "Estatísticas", path: "/estatisticas", icon: <FaChartLine />, badge: null },
-  { name: "Configurações", path: "/configuracoes", icon: <FaCog />, badge: null },
+  { name: "Assistência interativa", path: "/setup", icon: <FaHandsHelping />, badge: null },
 ];
 
 const MenuAside = ({ conteudoPrincipal }) => {
@@ -105,7 +105,7 @@ const MenuAside = ({ conteudoPrincipal }) => {
                   >
                     <span className="logo-emoji">📍</span>
                     <h4 className="logo-text">
-                      <span className="logo-highlight">Anuncios</span>Loc
+                      <span className="logo-highlight">Anuncios</span><span className="text-white">Loc</span>
                     </h4>
                   </motion.div>
                 )}

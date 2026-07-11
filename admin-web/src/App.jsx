@@ -13,6 +13,7 @@ import Anuncios from './components/Anuncios/Anuncios';
 import Locais from './components/Locais/Locais';
 
 import './App.css';
+import SetupGuide from './components/SetupGuide/SetupGuide';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,6 +56,13 @@ function App() {
             path="/locais"
             element={
               <MenuAside conteudoPrincipal={<Locais />} />
+            }
+          />
+         
+          <Route
+            path="/setup"
+            element={
+              <MenuAside conteudoPrincipal={<SetupGuide />} />
             }
           />
           <Route path="*" element={<Navigate to="/" />} />
