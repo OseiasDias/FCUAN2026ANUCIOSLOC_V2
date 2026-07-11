@@ -8,11 +8,23 @@
   font-family: 'Poppins', sans-serif;
 }
 
+/* ---------- RESET GLOBAL ---------- */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+}
+
 /* ---------- LAYOUT ---------- */
 .layout-container {
   display: flex;
   min-height: 100vh;
+  height: 100%;
+  width: 100%;
   background: #f4f6f9;
+  overflow: hidden;
 }
 
 /* ---------- SIDEBAR ---------- */
@@ -32,7 +44,6 @@
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ✅ ESTADO NORMAL (VISÍVEL) */
 .sidebar.open {
   width: 280px;
 }
@@ -382,7 +393,10 @@
   color: #ff6b6b;
 }
 
-/* ---------- MAIN CONTENT ---------- */
+/* ============================================
+   ✅ MAIN CONTENT - CORRIGIDO
+   ============================================ */
+
 .main-content {
   flex: 1;
   min-height: 100vh;
@@ -390,21 +404,28 @@
   flex-direction: column;
   margin-left: 280px;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  width: calc(100% - 280px);
+  overflow-x: hidden;
+  background: #f4f6f9;
 }
 
 .main-content.with-sidebar-collapsed {
   margin-left: 80px;
+  width: calc(100% - 80px);
 }
 
 .content-area {
   flex: 1;
-  padding: 20px 24px;
+  padding: 24px 32px;
   background: #f4f6f9;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* ---------- MOBILE OVERLAY ---------- */
 .mobile-overlay {
-  display: none; /* ✅ OCULTO POR PADRÃO */
+  display: none;
 }
 
 /* ---------- MODAL DE LOGOUT ---------- */
@@ -495,13 +516,13 @@
 }
 
 /* ============================================
-   ✅ RESPONSIVO - CORRIGIDO
+   ✅ RESPONSIVO
    ============================================ */
 
-/* ✅ TELAS GRANDES (> 992px) - MENU SEMPRE VISÍVEL */
+/* TELAS GRANDES (> 992px) */
 @media (min-width: 993px) {
   .sidebar {
-    transform: translateX(0) !important; /* ✅ FORÇA VISÍVEL */
+    transform: translateX(0) !important;
     width: auto;
   }
 
@@ -514,7 +535,7 @@
   }
 }
 
-/* ✅ TELAS MÉDIAS E PEQUENAS (<= 992px) - MENU OCULTÁVEL */
+/* TELAS MÉDIAS E PEQUENAS (<= 992px) */
 @media (max-width: 992px) {
   .sidebar {
     transform: translateX(-100%);
@@ -528,9 +549,19 @@
 
   .main-content {
     margin-left: 0 !important;
+    width: 100% !important;
+    min-height: 100vh;
   }
 
-  /* ✅ QUANDO O MENU ESTÁ COLLAPSED EM MOBILE, MOSTRA O CONTEÚDO COMPLETO */
+  .main-content.with-sidebar-collapsed {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .content-area {
+    padding: 16px 20px;
+  }
+
   .sidebar.collapsed {
     width: 280px !important;
   }
@@ -580,7 +611,6 @@
     display: flex !important;
   }
 
-  /* ✅ OVERLAY VISÍVEL EM MOBILE */
   .mobile-overlay {
     display: block;
     position: fixed;
@@ -601,7 +631,7 @@
   }
 }
 
-/* ✅ TELAS MUITO PEQUENAS (<= 576px) */
+/* TELAS MUITO PEQUENAS (<= 576px) */
 @media (max-width: 576px) {
   .content-area {
     padding: 12px 16px;
