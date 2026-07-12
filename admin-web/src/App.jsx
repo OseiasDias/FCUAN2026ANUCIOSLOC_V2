@@ -14,6 +14,8 @@ import Locais from './components/Locais/Locais';
 
 import './App.css';
 import SetupGuide from './components/SetupGuide/SetupGuide';
+import PerfilAdmin from './components/PerfilAdmin/PerfilAdmin';
+import Configuracoes from './components/Configuracoes/Configuracoes';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -63,6 +65,20 @@ function App() {
             path="/setup"
             element={
               <MenuAside conteudoPrincipal={<SetupGuide />} />
+            }
+          />
+
+          <Route
+            path="/perfil"
+            element={
+              <MenuAside conteudoPrincipal={<PerfilAdmin />} />
+            }
+          />
+
+          <Route
+            path="/configuracoes"
+            element={
+              <MenuAside conteudoPrincipal={<Configuracoes />} />
             }
           />
           <Route path="*" element={<Navigate to="/" />} />
