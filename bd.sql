@@ -1,179 +1,183 @@
--- Criar base de dados
+-- ============================================
+-- CRIAÇÃO DA BASE DE DADOS
+-- ============================================
+
 CREATE DATABASE IF NOT EXISTS anunciosloc;
 USE anunciosloc;
 
--- =====================================================
--- TABELA: utilizadores
--- =====================================================
+-- ============================================
+-- TABELA: UTILIZADORES
+-- ============================================
 
 CREATE TABLE IF NOT EXISTS utilizadores (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     nome VARCHAR(100) NOT NULL,
-    email VARCHAR(150) NOT NULL UNIQUE,
-    senha VARCHAR(255) NOT NULL,
     saldo DECIMAL(10,2) DEFAULT 10.00,
-    data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ultimo_anuncio DATETIME NULL,
-    sessao_activa BOOLEAN DEFAULT TRUE,
+    ativo BOOLEAN DEFAULT TRUE,
+    role VARCHAR(20) DEFAULT 'USER',
     total_anuncios_publicados INT DEFAULT 0,
-    total_visualizacoes_recebidas INT DEFAULT 0
+    total_visualizacoes_recebidas INT DEFAULT 0,
+    ultimo_login TIMESTAMP NULL,
+    data_registo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_anuncio TIMESTAMP NULL,
+    INDEX idx_email (email)
 );
 
--- =====================================================
--- TABELA: perfil_utilizador
--- =====================================================
+-- ============================================
+-- TABELA: ADMINISTRADORES
+-- ============================================
 
-CREATE TABLE IF NOT EXISTS perfil_utilizador (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    utilizador_id BIGINT NOT NULL,
-    chave_perfil VARCHAR(100) NOT NULL,
-    valor_perfil VARCHAR(100) NOT NULL,
-    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
-);
-
--- =====================================================
--- TABELA: infraestruturas
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS infraestruturas (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+CREATE TABLE IF NOT EXISTS administradores (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) UNIQUE NOT NULL,
     nome VARCHAR(100) NOT NULL,
-    capacidade INT NOT NULL,
-    premio_entrega DECIMAL(10,2) DEFAULT 2.00,
-    conexoes_actuais INT DEFAULT 0,
-    anuncios_entregues INT DEFAULT 0,
-    anuncios_publicados INT DEFAULT 0
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(20) DEFAULT 'ADMIN',
+    ativo BOOLEAN DEFAULT TRUE,
+    data_registo TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acesso TIMESTAMP NULL,
+    INDEX idx_email (email)
 );
 
--- =====================================================
--- TABELA: locais
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS locais (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    nome VARCHAR(100) NOT NULL,
-    tipo ENUM('GPS', 'WIFI') NOT NULL,
-    latitude DOUBLE NULL,
-    longitude DOUBLE NULL,
-    raio DOUBLE NULL,
-    wifi_ssid VARCHAR(150) NULL,
-    infraestrutura_id BIGINT NOT NULL,
-    FOREIGN KEY (infraestrutura_id) REFERENCES infraestruturas(id) ON DELETE CASCADE
-);
-
--- =====================================================
--- TABELA: anuncios
--- =====================================================
+-- ============================================
+-- TABELA: ANUNCIOS
+-- ============================================
 
 CREATE TABLE IF NOT EXISTS anuncios (
     id VARCHAR(36) PRIMARY KEY,
-    titulo VARCHAR(150) NOT NULL,
+    titulo VARCHAR(100) NOT NULL,
     descricao TEXT NOT NULL,
-    utilizador_id BIGINT NOT NULL,
+    autor_email VARCHAR(100) NOT NULL,
     local_id BIGINT NOT NULL,
-    data_criacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    data_expiracao DATETIME NOT NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_expiracao TIMESTAMP NOT NULL,
     total_visualizacoes INT DEFAULT 0,
+    total_entregas INT DEFAULT 0,
     activo BOOLEAN DEFAULT TRUE,
-    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE,
-    FOREIGN KEY (local_id) REFERENCES locais(id) ON DELETE CASCADE
+    expirado BOOLEAN DEFAULT FALSE,
+    INDEX idx_autor_email (autor_email),
+    INDEX idx_local_id (local_id),
+    INDEX idx_data_expiracao (data_expiracao),
+    FOREIGN KEY (autor_email) REFERENCES utilizadores(email) ON DELETE CASCADE
 );
 
--- =====================================================
--- TABELA: visualizacoes_anuncio
--- =====================================================
+-- ============================================
+-- TABELA: LOCAIS (INFRAESTRUTURAS)
+-- ============================================
 
-CREATE TABLE IF NOT EXISTS visualizacoes_anuncio (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    anuncio_id VARCHAR(36) NOT NULL,
+CREATE TABLE IF NOT EXISTS locais (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    tipo ENUM('GPS', 'WIFI', 'BLE') DEFAULT 'GPS',
+    latitude DECIMAL(10,8) NULL,
+    longitude DECIMAL(11,8) NULL,
+    raio DECIMAL(10,2) DEFAULT 100.00,
+    wifi_ssid VARCHAR(150) NULL,
+    infraestrutura_id BIGINT NULL,
+    criado_por BIGINT NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_nome (nome),
+    INDEX idx_infraestrutura (infraestrutura_id)
+);
+
+-- ============================================
+-- TABELA: INFRAESTRUTURAS
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS infraestruturas (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL UNIQUE,
+    localizacao VARCHAR(200) NULL,
+    latitude DECIMAL(10,8) NULL,
+    longitude DECIMAL(11,8) NULL,
+    capacidade INT DEFAULT 100,
+    raio DECIMAL(10,2) DEFAULT 100.00,
+    url VARCHAR(255) NULL,
+    total_anuncios INT DEFAULT 0,
+    total_entregas INT DEFAULT 0,
+    utilizadores_conectados INT DEFAULT 0,
+    ativo BOOLEAN DEFAULT TRUE,
+    criador_email VARCHAR(100) NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_nome (nome)
+);
+
+-- ============================================
+-- TABELA: TICKETS (AUTH)
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tickets (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    ticket_id VARCHAR(100) UNIQUE NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    tipo VARCHAR(20) DEFAULT 'ACCESS',
+    validade TIMESTAMP NOT NULL,
+    usado BOOLEAN DEFAULT FALSE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_ticket_id (ticket_id),
+    INDEX idx_email (email)
+);
+
+-- ============================================
+-- TABELA: PERFIL_UTILIZADORES
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS perfil_utilizadores (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     utilizador_id BIGINT NOT NULL,
-    data_visualizacao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (anuncio_id) REFERENCES anuncios(id) ON DELETE CASCADE,
+    chave VARCHAR(100) NOT NULL,
+    valor VARCHAR(255) NOT NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_utilizador (utilizador_id),
+    INDEX idx_chave (chave),
     FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
 );
 
--- =====================================================
--- TABELA: comentarios
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS comentarios (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    anuncio_id VARCHAR(36) NOT NULL,
-    utilizador_id BIGINT NOT NULL,
-    texto TEXT NOT NULL,
-    data_comentario DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (anuncio_id) REFERENCES anuncios(id) ON DELETE CASCADE,
-    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
-);
-
--- =====================================================
--- TABELA: restricoes
--- =====================================================
+-- ============================================
+-- TABELA: RESTRICOES
+-- ============================================
 
 CREATE TABLE IF NOT EXISTS restricoes (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     anuncio_id VARCHAR(36) NOT NULL,
     tipo ENUM('WHITELIST', 'BLACKLIST') NOT NULL,
-    chave_restricao VARCHAR(100) NOT NULL,
-    valor_restricao VARCHAR(100) NOT NULL,
+    chave VARCHAR(100) NOT NULL,
+    valor VARCHAR(255) NOT NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_anuncio (anuncio_id),
     FOREIGN KEY (anuncio_id) REFERENCES anuncios(id) ON DELETE CASCADE
 );
 
--- =====================================================
--- TABELA: sessoes
--- =====================================================
+-- ============================================
+-- INSERIR ADMIN PADRÃO
+-- ============================================
 
-CREATE TABLE IF NOT EXISTS sessoes (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    utilizador_id BIGINT NOT NULL,
-    token VARCHAR(255) NOT NULL,
-    data_inicio DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expiracao DATETIME NOT NULL,
-    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE
-);
+INSERT INTO administradores (email, nome, password_hash, role)
+VALUES ('admin@anunciosloc.com', 'Administrador', SHA2('admin123', 256), 'SUPER_ADMIN')
+ON DUPLICATE KEY UPDATE email = email;
 
--- =====================================================
--- TABELA: replica_saldo
--- =====================================================
+-- ============================================
+-- INSERIR LOCAIS PADRÃO
+-- ============================================
 
-CREATE TABLE IF NOT EXISTS replica_saldo (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    utilizador_id BIGINT NOT NULL,
-    infraestrutura_id BIGINT NOT NULL,
-    saldo DECIMAL(10,2) NOT NULL,
-    versao INT DEFAULT 1,
-    FOREIGN KEY (utilizador_id) REFERENCES utilizadores(id) ON DELETE CASCADE,
-    FOREIGN KEY (infraestrutura_id) REFERENCES infraestruturas(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_replica (utilizador_id, infraestrutura_id)
-);
+INSERT INTO locais (nome, tipo, latitude, longitude, raio, ativo) VALUES
+('Belas Shopping', 'GPS', -8.98, 13.18, 100, 1),
+('Talatona', 'GPS', -8.89, 13.20, 100, 1),
+('Kilamba', 'GPS', -9.00, 13.30, 100, 1),
+('Luanda Sul', 'GPS', -8.95, 13.25, 100, 1);
 
--- =====================================================
--- INDICES
--- =====================================================
+-- ============================================
+-- VERIFICAR DADOS INSERIDOS
+-- ============================================
 
-CREATE INDEX idx_utilizador_email ON utilizadores(email);
-CREATE INDEX idx_anuncio_data_expiracao ON anuncios(data_expiracao);
-CREATE INDEX idx_anuncio_activo ON anuncios(activo);
-CREATE INDEX idx_local_tipo ON locais(tipo);
-CREATE INDEX idx_sessao_token ON sessoes(token);
-CREATE INDEX idx_sessao_expiracao ON sessoes(expiracao);
+SELECT '========== ADMINISTRADORES ==========' AS '';
+SELECT * FROM administradores;
 
--- =====================================================
--- DADOS INICIAIS
--- =====================================================
+SELECT '========== LOCAIS ==========' AS '';
+SELECT * FROM locais;
 
-INSERT INTO infraestruturas (nome, capacidade, premio_entrega) VALUES 
-('Infraestrutura Central', 100, 2.00),
-('Belas Shopping', 50, 2.50),
-('Aeroporto 4 de Fevereiro', 200, 3.00);
-
-INSERT INTO locais (nome, tipo, latitude, longitude, raio, infraestrutura_id) VALUES 
-('Largo da Independencia', 'GPS', -8.838333, 13.234444, 20, 1),
-('Belas Shopping', 'GPS', -8.980000, 13.180000, 15, 2),
-('Aeroporto 4 de Fevereiro', 'GPS', -8.858333, 13.231111, 30, 3);
-
--- Utilizador admin para testes
-INSERT INTO utilizadores (nome, email, senha, saldo, sessao_activa) VALUES 
-('Administrador', 'admin@anunciosloc.com', 'admin123', 1000.00, TRUE);
-
-SELECT 'Base de dados criada com sucesso!' as Mensagem;
+SELECT '========== TABELAS CRIADAS ==========' AS '';
+SHOW TABLES;

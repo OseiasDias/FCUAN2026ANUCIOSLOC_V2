@@ -7,11 +7,13 @@ import pt.anunciosloc.server.config.ConnectionFactory;
 import pt.anunciosloc.server.model.*;
 import pt.anunciosloc.server.quorum.QuorumManager;
 import pt.anunciosloc.server.repository.UtilizadorRepository;
+import pt.anunciosloc.shared.Administrador;
 import pt.anunciosloc.shared.Restricao;
 import pt.anunciosloc.server.repository.AnuncioRepository;
 import pt.anunciosloc.server.repository.InfraestruturaRepository;
 import pt.anunciosloc.server.repository.PerfilUtilizadorRepository;
 import pt.anunciosloc.server.repository.RestricaoRepository;
+import java.sql.Statement;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -20,6 +22,17 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import java.net.URL;
+import java.sql.Timestamp;
+
+import jakarta.xml.ws.Service;
+import javax.xml.namespace.QName;
+import pt.anunciosloc.shared.AuthService;
+import pt.anunciosloc.shared.LoginResponse;
+import pt.anunciosloc.shared.Ticket;
+import pt.anunciosloc.server.repository.AdminRepository;
+
+
 @WebService(endpointInterface = "pt.anunciosloc.server.service.AnunciosLocService")
 public class AnunciosLocServiceImpl implements AnunciosLocService {
 
@@ -27,6 +40,7 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
     private AnuncioRepository anuncioRepo;
     private InfraestruturaRepository infraRepo;
     private QuorumManager quorumManager;
+    private AuthService authService;
 
     public AnunciosLocServiceImpl() {
         this.utilizadorRepo = new UtilizadorRepository();
@@ -40,7 +54,7 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
         System.out.println("Base de dados: anunciosloc");
         System.out.println("================================");
     }
-
+  
     private void registarNoKerberos(String email, String password) {
         try {
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
@@ -888,4 +902,152 @@ public String[] receberAnunciosPorLocalizacao(String email, double latitude, dou
 
         return RAIO_TERRA * c;
     }
+
+
+   
+// ==================== ADMINISTRADOR ====================
+
+private Administrador adminAtual;
+
+// ==================== MÉTODOS ADMIN ====================
+
+// ==================== ADMIN ====================
+
+private void inicializarAdmin() {
+    try (Connection conn = ConnectionFactory.getConnection()) {
+        AdminRepository adminRepo = new AdminRepository(conn);
+        adminRepo.criarTabela();
+        adminRepo.inserirAdminPadrao();
+        
+        Administrador admin = adminRepo.findByEmail("admin@anunciosloc.com");
+        if (admin != null) {
+            System.out.println("========================================");
+            System.out.println("🔐 ADMIN INICIALIZADO");
+            System.out.println("📧 Email: admin@anunciosloc.com");
+            System.out.println("🔑 Password: admin123");
+            System.out.println("👤 Role: " + admin.getRole());
+            System.out.println("========================================");
+        }
+    } catch (SQLException e) {
+        System.err.println("❌ Erro ao inicializar admin: " + e.getMessage());
+    }
+}
+
+private void conectarAoKerberos() {
+    try {
+        URL wsdlUrl = new URL("http://localhost:8085/auth?wsdl");
+        QName qname = new QName("http://service.auth.anunciosloc.pt/", 
+                                "AuthServiceImplService");
+        Service service = Service.create(wsdlUrl, qname);
+        this.authService = service.getPort(AuthService.class);
+        System.out.println("✅ Conectado ao Kerberos (porta 8085)");
+    } catch (Exception e) {
+        System.err.println("⚠️ Erro ao conectar ao Kerberos: " + e.getMessage());
+        System.err.println("   O servidor Auth deve estar rodando na porta 8085");
+    }
+}
+
+// ==================== ADMIN LOGIN ====================
+// ==================== ADMIN LOGIN ====================
+
+@Override
+public String loginAdmin(String email, String password) {
+    try (Connection conn = ConnectionFactory.getConnection()) {
+        // 1. Verificar se admin existe no banco
+        AdminRepository adminRepo = new AdminRepository(conn);
+        if (!adminRepo.existeAdmin(email)) {
+            return "Administrador nao encontrado";
+        }
+        
+        // 2. Autenticar via Auth Service (Kerberos)
+        if (authService == null) {
+            return "Servidor de autenticacao indisponivel";
+        }
+        
+        try {
+            // Chamar o Auth Service - usar solicitarTicketAdmin para SOAP
+            Ticket ticket = authService.solicitarTicketAdmin(email, password);
+            
+            if (ticket != null && ticket.getTicketId() != null) {
+                // 3. Atualizar ultimo acesso
+                adminRepo.atualizarUltimoAcesso(email);
+                
+                return "Login realizado com sucesso\n" +
+                       "Ticket: " + ticket.getTicketId() + "\n" +
+                       "Email: " + ticket.getClienteEmail();
+            }
+            
+            return "Credenciais invalidas";
+            
+        } catch (Exception e) {
+            return "Erro na autenticacao: " + e.getMessage();
+        }
+        
+    } catch (SQLException e) {
+        return "Erro no banco de dados: " + e.getMessage();
+    }
+}
+
+@Override
+public String getAdminInfo(String email) {
+    try (Connection conn = ConnectionFactory.getConnection()) {
+        AdminRepository adminRepo = new AdminRepository(conn);
+        Administrador admin = adminRepo.findByEmail(email);
+        if (admin == null) {
+            return "❌ Administrador não encontrado";
+        }
+        return "👤 Nome: " + admin.getNome() +
+               "\n📧 Email: " + admin.getEmail() +
+               "\n🔑 Role: " + admin.getRole() +
+               "\n📅 Registo: " + admin.getDataRegisto();
+    } catch (SQLException e) {
+        return "❌ Erro: " + e.getMessage();
+    }
+}
+
+@Override
+public String atualizarAdmin(String email, String nome, String password) {
+    try (Connection conn = ConnectionFactory.getConnection()) {
+        StringBuilder sql = new StringBuilder("UPDATE administradores SET ");
+        List<Object> params = new ArrayList<>();
+        
+        if (nome != null && !nome.isEmpty()) {
+            sql.append("nome = ?, ");
+            params.add(nome);
+        }
+        
+        if (password != null && !password.isEmpty()) {
+            sql.append("password_hash = ?, ");
+            params.add(hashPassword(password));
+        }
+        
+        if (params.isEmpty()) {
+            return "❌ Nenhum campo para atualizar";
+        }
+        
+        sql.setLength(sql.length() - 2);
+        sql.append(" WHERE email = ?");
+        params.add(email);
+        
+        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) {
+                stmt.setObject(i + 1, params.get(i));
+            }
+            stmt.executeUpdate();
+        }
+        return "✅ Administrador atualizado com sucesso!";
+    } catch (SQLException e) {
+        return "❌ Erro: " + e.getMessage();
+    }
+}
+
+private String hashPassword(String password) {
+    try {
+        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+        byte[] hash = md.digest(password.getBytes());
+        return Base64.getEncoder().encodeToString(hash);
+    } catch (Exception e) {
+        return password;
+    }
+}
 }

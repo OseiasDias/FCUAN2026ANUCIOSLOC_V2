@@ -5,6 +5,7 @@ C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\I
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Utilizador.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\publisher\ServidorPublisher.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\quorum\QuorumManager.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\AdminRepository.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\AnuncioRepository.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\ComentarioRepository.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\repository\InfraestruturaRepository.java

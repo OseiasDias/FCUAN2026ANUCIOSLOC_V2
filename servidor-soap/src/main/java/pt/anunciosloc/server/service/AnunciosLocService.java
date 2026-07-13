@@ -167,4 +167,21 @@ public interface AnunciosLocService {
 String[] receberAnunciosPorLocalizacao(@WebParam(name = "email") String email,
                                        @WebParam(name = "latitude") double latitude,
                                        @WebParam(name = "longitude") double longitude);
-}
+
+// ==================== ADMIN ====================
+
+
+                
+                // ==================== ADMIN ====================
+
+@WebMethod
+String loginAdmin(@WebParam(name = "email") String email,
+                  @WebParam(name = "password") String password);
+
+@WebMethod
+String getAdminInfo(@WebParam(name = "email") String email);
+
+@WebMethod
+String atualizarAdmin(@WebParam(name = "email") String email,
+                      @WebParam(name = "nome") String nome,
+                      @WebParam(name = "password") String password);}

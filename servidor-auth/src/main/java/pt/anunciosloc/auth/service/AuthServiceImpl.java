@@ -5,6 +5,7 @@ import pt.anunciosloc.auth.model.LoginResponse;
 import pt.anunciosloc.auth.repository.UtilizadorAuthRepository;
 import pt.anunciosloc.auth.repository.TicketRepository;
 import pt.anunciosloc.auth.security.JwtUtil;
+
 import java.sql.SQLException;
 
 @WebService(endpointInterface = "pt.anunciosloc.auth.service.AuthService")
@@ -17,15 +18,17 @@ public class AuthServiceImpl implements AuthService {
         this.utilizadorRepo = new UtilizadorAuthRepository();
         this.ticketRepo = new TicketRepository();
         
-        System.out.println("=== AUTH SERVICE COM JWT + BCrypt ===");
+        System.out.println("=== AUTH SERVICE COM JWT ===");
         System.out.println("Base de dados: anunciosloc");
-        System.out.println("======================================");
+        System.out.println("=============================");
     }
     
     @Override
     public String ping() {
-        return "Auth Service ativo com JWT + BCrypt!";
+        return "Auth Service ativo com JWT!";
     }
+    
+    // ==================== JWT (REST/Admin) ====================
     
     @Override
     public LoginResponse login(String email, String password) {
@@ -60,17 +63,18 @@ public class AuthServiceImpl implements AuthService {
         
         try {
             if (!ticketRepo.validarRefreshToken(refreshToken)) {
-                System.err.println("Refresh token invalido ou expirado");
+                System.err.println("Refresh token invalido");
                 return null;
             }
             
             ticketRepo.marcarRefreshTokenUsado(refreshToken);
             
             System.out.println("Refresh token valido");
+            // TODO: Gerar novo access token
             return null;
             
         } catch (SQLException e) {
-            System.err.println("Erro ao processar refresh: " + e.getMessage());
+            System.err.println("Erro no refresh: " + e.getMessage());
             return null;
         }
     }
@@ -84,21 +88,22 @@ public class AuthServiceImpl implements AuthService {
     public String registarUtilizador(String email, String password) {
         try {
             if (utilizadorRepo.utilizadorExiste(email)) {
-                return "Utilizador ja existe!";
+                return "Utilizador ja existe";
             }
             
             boolean registado = utilizadorRepo.registarUtilizador(email, password);
             
             if (registado) {
                 System.out.println("Utilizador registado: " + email);
-                return "Utilizador registado com sucesso!";
-            } else {
-                return "Erro ao registar utilizador!";
+                return "Utilizador registado com sucesso";
             }
+            return "Erro ao registar";
             
         } catch (SQLException e) {
             System.err.println("Erro ao registar: " + e.getMessage());
             return "Erro: " + e.getMessage();
         }
     }
+
+    
 }

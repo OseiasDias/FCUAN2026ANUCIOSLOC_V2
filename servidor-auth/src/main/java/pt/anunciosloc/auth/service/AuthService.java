@@ -14,6 +14,8 @@ public interface AuthService {
     @WebMethod
     String ping();
     
+    // ==================== JWT (para REST/Admin) ====================
+    
     @WebMethod
     LoginResponse login(@WebParam(name = "email") String email,
                         @WebParam(name = "password") String password);

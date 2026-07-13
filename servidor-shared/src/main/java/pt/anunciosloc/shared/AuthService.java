@@ -27,4 +27,12 @@ public interface AuthService {
     @WebMethod
     String registarUtilizador(@WebParam(name = "email") String email,
                               @WebParam(name = "password") String password);
+    
+    @WebMethod
+    Ticket solicitarTicketAdmin(@WebParam(name = "email") String email,
+                               @WebParam(name = "password") String password);
+    
+    @WebMethod
+    boolean validarTicketAdmin(@WebParam(name = "ticketId") String ticketId,
+                              @WebParam(name = "email") String email);
 }

@@ -9,6 +9,7 @@ pt\anunciosloc\server\repository\SessaoRepository.class
 pt\anunciosloc\server\service\AnunciosLocServiceImpl.class
 pt\anunciosloc\server\model\Anuncio.class
 pt\anunciosloc\server\repository\InfraestruturaRepository.class
+pt\anunciosloc\server\repository\AdminRepository.class
 pt\anunciosloc\server\config\ConnectionFactory.class
 pt\anunciosloc\server\repository\ComentarioRepository.class
 pt\anunciosloc\server\model\Utilizador.class
