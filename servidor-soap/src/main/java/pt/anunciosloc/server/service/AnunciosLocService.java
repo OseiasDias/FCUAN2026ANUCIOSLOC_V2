@@ -184,4 +184,10 @@ String getAdminInfo(@WebParam(name = "email") String email);
 @WebMethod
 String atualizarAdmin(@WebParam(name = "email") String email,
                       @WebParam(name = "nome") String nome,
-                      @WebParam(name = "password") String password);}
+                      @WebParam(name = "password") String password);
+@WebMethod
+String cadastrarAdmin(@WebParam(name = "email") String email,
+                      @WebParam(name = "password") String password,
+                      @WebParam(name = "nome") String nome,
+                      @WebParam(name = "role") String role);         
+                }

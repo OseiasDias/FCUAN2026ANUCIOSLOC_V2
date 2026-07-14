@@ -1,5 +1,6 @@
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\client\InfraClient.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\config\ConnectionFactory.java
+C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\filter\CORSFilter.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Anuncio.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Infraestrutura.java
 C:\Android\ANUNCIOSLOC\servidor-soap\src\main\java\pt\anunciosloc\server\model\Utilizador.java

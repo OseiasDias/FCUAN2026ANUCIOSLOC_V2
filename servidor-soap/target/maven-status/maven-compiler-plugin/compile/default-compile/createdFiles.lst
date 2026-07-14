@@ -11,6 +11,7 @@ pt\anunciosloc\server\model\Anuncio.class
 pt\anunciosloc\server\repository\InfraestruturaRepository.class
 pt\anunciosloc\server\repository\AdminRepository.class
 pt\anunciosloc\server\config\ConnectionFactory.class
+pt\anunciosloc\server\filter\CORSFilter.class
 pt\anunciosloc\server\repository\ComentarioRepository.class
 pt\anunciosloc\server\model\Utilizador.class
 pt\anunciosloc\server\quorum\QuorumManager.class

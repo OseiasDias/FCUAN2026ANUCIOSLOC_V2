@@ -6,15 +6,14 @@ import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.Style;
 import pt.anunciosloc.auth.model.LoginResponse;
+import pt.anunciosloc.shared.Ticket;
 
-@WebService
+@WebService(targetNamespace = "http://service.auth.anunciosloc.pt/")
 @SOAPBinding(style = Style.RPC)
 public interface AuthService {
     
     @WebMethod
     String ping();
-    
-    // ==================== JWT (para REST/Admin) ====================
     
     @WebMethod
     LoginResponse login(@WebParam(name = "email") String email,
@@ -29,4 +28,12 @@ public interface AuthService {
     @WebMethod
     String registarUtilizador(@WebParam(name = "email") String email,
                               @WebParam(name = "password") String password);
+    
+    @WebMethod
+    Ticket solicitarTicketAdmin(@WebParam(name = "email") String email,
+                               @WebParam(name = "password") String password);
+    
+    @WebMethod
+    boolean validarTicketAdmin(@WebParam(name = "ticketId") String ticketId,
+                              @WebParam(name = "email") String email);
 }

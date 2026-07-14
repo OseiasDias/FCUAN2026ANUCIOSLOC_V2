@@ -1,12 +1,7 @@
 package pt.anunciosloc.shared;
 
 import java.io.Serializable;
-import jakarta.xml.bind.annotation.XmlAccessType;
-import jakarta.xml.bind.annotation.XmlAccessorType;
-import jakarta.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement
-@XmlAccessorType(XmlAccessType.FIELD)
 public class LoginResponse implements Serializable {
     private static final long serialVersionUID = 1L;
     

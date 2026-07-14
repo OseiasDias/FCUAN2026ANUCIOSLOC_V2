@@ -3,11 +3,12 @@ import { Container, Row, Col, Form, Button, Alert, Modal } from 'react-bootstrap
 import {
   FaEnvelope, FaLock, FaEye, FaEyeSlash, FaShieldAlt,
   FaArrowRight, FaUserCircle, FaKey, FaCheckCircle,
-  FaTimesCircle, FaSpinner, FaArrowLeft, FaPaperPlane,  // ← CORRIGIDO
+  FaTimesCircle, FaSpinner, FaArrowLeft, FaPaperPlane,
   FaInfoCircle, FaLockOpen
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { loginAdmin } from '../../services/soapService';  
 import './Login.css';
 
 const Login = ({ onLogin }) => {
@@ -51,7 +52,7 @@ const Login = ({ onLogin }) => {
 
   // ==================== HANDLERS ====================
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -62,19 +63,33 @@ const Login = ({ onLogin }) => {
 
     setLoading(true);
 
-    // Simular login - substituir com chamada real
-    if (email === 'admin@anunciosloc.com' && password === 'admin123') {
-      toast.success('Login realizado com sucesso!');
-      setTimeout(() => {
-        onLogin(email);
-      }, 500);
-    } else {
-      setError('Credenciais inválidas');
-      toast.error('Credenciais inválidas');
-      setLoading(false);
-    }
-  };
+    try {
+      // ✅ CHAMADA REAL AO BACKEND SOAP
+      const result = await loginAdmin(email, password);
 
+      if (result.success) {
+        toast.success('Login realizado com sucesso!');
+        
+        // Guardar sessão
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('userLogged', 'true');
+        
+        // Chamar callback do parent
+        setTimeout(() => {
+          onLogin(email);
+        }, 500);
+      } else {
+        setError(result.message || 'Credenciais inválidas');
+        toast.error(result.message || 'Credenciais inválidas');
+      }
+    } catch (error) {
+      console.error('Erro no login:', error);
+      setError('Erro ao conectar ao servidor');
+      toast.error('Erro ao conectar ao servidor');
+    }
+
+    setLoading(false);
+  };
   // ==================== RECUPERAÇÃO DE SENHA ====================
 
   const handleForgotPassword = () => {

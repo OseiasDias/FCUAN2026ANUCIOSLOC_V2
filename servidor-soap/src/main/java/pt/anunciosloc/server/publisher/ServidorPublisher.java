@@ -1,28 +1,85 @@
 package pt.anunciosloc.server.publisher;
 
+import com.sun.net.httpserver.HttpContext;
+import com.sun.net.httpserver.HttpServer;
+
 import jakarta.xml.ws.Endpoint;
+
+import pt.anunciosloc.server.filter.CORSFilter;
 import pt.anunciosloc.server.service.AnunciosLocServiceImpl;
 
+import java.net.InetSocketAddress;
+
+
 public class ServidorPublisher {
-    public static void main(String[] args) {
-        // Porta 8082 (nova porta)
-        String url = "http://0.0.0.0:8082/ws/anunciosloc";
-        
-        System.out.println("Publicando Web Service em: " + url);
-        
-        Endpoint endpoint = Endpoint.publish(url, new AnunciosLocServiceImpl());
-        
-        System.out.println("✅ Servidor SOAP iniciado na porta 8082!");
-        System.out.println("📄 WSDL: " + url + "?wsdl");
-        System.out.println("Prima ENTER para parar...");
-        
-        try {
-            System.in.read();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        
+
+
+    public static void main(String[] args) throws Exception {
+
+
+        int porta = 8082;
+
+
+        // Criar servidor HTTP
+        HttpServer server = HttpServer.create(
+                new InetSocketAddress("0.0.0.0", porta),
+                0
+        );
+
+
+        // Criar contexto SOAP
+        HttpContext context = server.createContext(
+                "/ws/anunciosloc"
+        );
+
+
+        // Ativar CORS
+        context.getFilters()
+                .add(new CORSFilter());
+
+
+        // Criar serviço SOAP
+        Endpoint endpoint =
+                Endpoint.create(
+                        new AnunciosLocServiceImpl()
+                );
+
+
+        // Publicar SOAP dentro do HttpServer
+        endpoint.publish(context);
+
+
+
+        // Iniciar servidor
+        server.start();
+
+
+
+        System.out.println("=================================");
+        System.out.println(" SERVIDOR SOAP INICIADO");
+        System.out.println(" Porta: " + porta);
+        System.out.println(
+            " WSDL: http://localhost:"
+            + porta
+            + "/ws/anunciosloc?wsdl"
+        );
+        System.out.println(" CORS ATIVO");
+        System.out.println("=================================");
+
+
+        System.out.println("Pressione ENTER para parar");
+
+
+        System.in.read();
+
+
+
+        // Encerrar
         endpoint.stop();
-        System.out.println(" Servidor parado.");
+
+        server.stop(0);
+
+
+        System.out.println("Servidor terminado");
     }
 }

@@ -6,27 +6,30 @@ import jakarta.jws.WebService;
 import jakarta.jws.soap.SOAPBinding;
 import jakarta.jws.soap.SOAPBinding.Style;
 
-@WebService
+@WebService(targetNamespace = "http://service.auth.anunciosloc.pt/")
 @SOAPBinding(style = Style.RPC)
 public interface AuthService {
     
     @WebMethod
     String ping();
     
-    @WebMethod
-    Ticket solicitarTicket(@WebParam(name = "email") String email,
-                          @WebParam(name = "password") String password);
+    // ==================== JWT (REST) ====================
     
     @WebMethod
-    boolean validarTicket(@WebParam(name = "ticketId") String ticketId,
-                         @WebParam(name = "email") String email);
+    LoginResponse login(@WebParam(name = "email") String email,
+                        @WebParam(name = "password") String password);
     
     @WebMethod
-    boolean invalidarTicket(@WebParam(name = "ticketId") String ticketId);
+    LoginResponse refreshToken(@WebParam(name = "refreshToken") String refreshToken);
+    
+    @WebMethod
+    boolean validarToken(@WebParam(name = "token") String token);
     
     @WebMethod
     String registarUtilizador(@WebParam(name = "email") String email,
                               @WebParam(name = "password") String password);
+    
+    // ==================== ADMIN (SOAP) ====================
     
     @WebMethod
     Ticket solicitarTicketAdmin(@WebParam(name = "email") String email,

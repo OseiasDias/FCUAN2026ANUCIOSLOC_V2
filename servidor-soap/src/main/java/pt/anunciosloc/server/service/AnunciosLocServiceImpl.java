@@ -32,7 +32,6 @@ import pt.anunciosloc.shared.LoginResponse;
 import pt.anunciosloc.shared.Ticket;
 import pt.anunciosloc.server.repository.AdminRepository;
 
-
 @WebService(endpointInterface = "pt.anunciosloc.server.service.AnunciosLocService")
 public class AnunciosLocServiceImpl implements AnunciosLocService {
 
@@ -49,12 +48,14 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
 
         List<String> urls = Arrays.asList("http://localhost:8081/infra");
         this.quorumManager = new QuorumManager(urls);
+        inicializarAdmin();
+        conectarAoKerberos();
 
         System.out.println("=== SERVIDOR INICIADO COM MYSQL ===");
         System.out.println("Base de dados: anunciosloc");
         System.out.println("================================");
     }
-  
+
     private void registarNoKerberos(String email, String password) {
         try {
             java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
@@ -212,7 +213,6 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
                 return "Saldo insuficiente. Precisa de 5 pontos para publicar.";
             }
 
-            
             // Debitar saldo
             boolean debitado = utilizadorRepo.debitarSaldo(email, 5.0);
             if (!debitado) {
@@ -759,8 +759,6 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
                 return "Erro: Saldo insuficiente! Necessario 5 pontos para publicar. Seu saldo: " + (int) u.getSaldo();
             }
 
-          
-
             // 8. Verificar se o local existe
             Infraestrutura infra = infraRepo.buscarPorNome(local);
             if (infra == null) {
@@ -805,88 +803,88 @@ public class AnunciosLocServiceImpl implements AnunciosLocService {
     }
 
     @Override
-public String[] receberAnunciosPorLocalizacao(String email, double latitude, double longitude) {
-    System.out.println("=== RECEBER ANUNCIOS POR LOCALIZACAO ===");
-    System.out.println("Email: " + email);
-    System.out.println("Latitude: " + latitude);
-    System.out.println("Longitude: " + longitude);
+    public String[] receberAnunciosPorLocalizacao(String email, double latitude, double longitude) {
+        System.out.println("=== RECEBER ANUNCIOS POR LOCALIZACAO ===");
+        System.out.println("Email: " + email);
+        System.out.println("Latitude: " + latitude);
+        System.out.println("Longitude: " + longitude);
 
-    try {
-        // 1. Verificar se o utilizador existe
-        Utilizador u = utilizadorRepo.buscarPorEmail(email);
-        if (u == null || !u.isAtivo()) {
-            return new String[] { "Erro: Utilizador nao encontrado: " + email };
-        }
-
-        // 2. Buscar TODOS os locais (com raio)
-        List<Infraestrutura> locais = infraRepo.listarTodas();  // ← JÁ TEM RAIO!
-        
-        System.out.println("📍 Total de locais encontrados: " + locais.size());
-
-        // 3. Encontrar o local onde o utilizador está
-        Infraestrutura localEncontrado = null;
-        double distanciaMinima = Double.MAX_VALUE;
-        
-        for (Infraestrutura local : locais) {
-            double distancia = calcularDistancia(
-                latitude, longitude,
-                local.getLatitude(), local.getLongitude()
-            );
-            
-            double raio = local.getRaio();  // ← AGORA FUNCIONA!
-            
-            System.out.println("📏 Distancia para " + local.getNome() + 
-                             ": " + String.format("%.2f", distancia) + "m (raio: " + raio + "m)");
-            
-            if (distancia <= raio && distancia < distanciaMinima) {
-                distanciaMinima = distancia;
-                localEncontrado = local;
+        try {
+            // 1. Verificar se o utilizador existe
+            Utilizador u = utilizadorRepo.buscarPorEmail(email);
+            if (u == null || !u.isAtivo()) {
+                return new String[] { "Erro: Utilizador nao encontrado: " + email };
             }
-        }
 
-        if (localEncontrado == null) {
-            return new String[] { "Nenhum local encontrado para as coordenadas fornecidas." };
-        }
+            // 2. Buscar TODOS os locais (com raio)
+            List<Infraestrutura> locais = infraRepo.listarTodas(); // ← JÁ TEM RAIO!
 
-        System.out.println("✅ Local detectado: " + localEncontrado.getNome() + 
-                          " (distancia: " + String.format("%.2f", distanciaMinima) + "m)");
+            System.out.println("📍 Total de locais encontrados: " + locais.size());
 
-        // 4. Buscar anúncios do local
-        String sqlAnuncios = "SELECT a.id, a.titulo, a.descricao, u.email as autor_email, a.data_criacao " +
-                            "FROM anuncios a " +
-                            "JOIN utilizadores u ON a.utilizador_id = u.id " +
-                            "WHERE a.local_id = ? " +
-                            "AND a.activo = 1 " +
-                            "AND a.data_expiracao > NOW() " +
-                            "AND u.email != ? " +
-                            "ORDER BY a.data_criacao DESC";
+            // 3. Encontrar o local onde o utilizador está
+            Infraestrutura localEncontrado = null;
+            double distanciaMinima = Double.MAX_VALUE;
 
-        List<String> anuncios = new ArrayList<>();
+            for (Infraestrutura local : locais) {
+                double distancia = calcularDistancia(
+                        latitude, longitude,
+                        local.getLatitude(), local.getLongitude());
 
-        try (Connection conn = ConnectionFactory.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sqlAnuncios)) {
-            
-            stmt.setLong(1, localEncontrado.getId());
-            stmt.setString(2, email);
-            ResultSet rs = stmt.executeQuery();
+                double raio = local.getRaio(); // ← AGORA FUNCIONA!
 
-            while (rs.next()) {
-                String mensagem = rs.getString("titulo") + "|" +
-                                  rs.getString("descricao") + "|" +
-                                  rs.getString("autor_email") + "|" +
-                                  rs.getTimestamp("data_criacao").toString();
-                anuncios.add(mensagem);
+                System.out.println("📏 Distancia para " + local.getNome() +
+                        ": " + String.format("%.2f", distancia) + "m (raio: " + raio + "m)");
+
+                if (distancia <= raio && distancia < distanciaMinima) {
+                    distanciaMinima = distancia;
+                    localEncontrado = local;
+                }
             }
+
+            if (localEncontrado == null) {
+                return new String[] { "Nenhum local encontrado para as coordenadas fornecidas." };
+            }
+
+            System.out.println("✅ Local detectado: " + localEncontrado.getNome() +
+                    " (distancia: " + String.format("%.2f", distanciaMinima) + "m)");
+
+            // 4. Buscar anúncios do local
+            String sqlAnuncios = "SELECT a.id, a.titulo, a.descricao, u.email as autor_email, a.data_criacao " +
+                    "FROM anuncios a " +
+                    "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                    "WHERE a.local_id = ? " +
+                    "AND a.activo = 1 " +
+                    "AND a.data_expiracao > NOW() " +
+                    "AND u.email != ? " +
+                    "ORDER BY a.data_criacao DESC";
+
+            List<String> anuncios = new ArrayList<>();
+
+            try (Connection conn = ConnectionFactory.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sqlAnuncios)) {
+
+                stmt.setLong(1, localEncontrado.getId());
+                stmt.setString(2, email);
+                ResultSet rs = stmt.executeQuery();
+
+                while (rs.next()) {
+                    String mensagem = rs.getString("titulo") + "|" +
+                            rs.getString("descricao") + "|" +
+                            rs.getString("autor_email") + "|" +
+                            rs.getTimestamp("data_criacao").toString();
+                    anuncios.add(mensagem);
+                }
+            }
+
+            System.out.println(" Total de anuncios encontrados: " + anuncios.size());
+            return anuncios.toArray(new String[0]);
+
+        } catch (SQLException e) {
+            System.err.println(" Erro ao receber anuncios: " + e.getMessage());
+            return new String[] { "Erro: " + e.getMessage() };
         }
-
-        System.out.println(" Total de anuncios encontrados: " + anuncios.size());
-        return anuncios.toArray(new String[0]);
-
-    } catch (SQLException e) {
-        System.err.println(" Erro ao receber anuncios: " + e.getMessage());
-        return new String[] { "Erro: " + e.getMessage() };
     }
-}
+
     // Método para calcular distância (Haversine)
     private double calcularDistancia(double lat1, double lon1, double lat2, double lon2) {
         final int RAIO_TERRA = 6371000; // metros
@@ -903,151 +901,189 @@ public String[] receberAnunciosPorLocalizacao(String email, double latitude, dou
         return RAIO_TERRA * c;
     }
 
+    // ==================== ADMINISTRADOR ====================
 
-   
-// ==================== ADMINISTRADOR ====================
+    private Administrador adminAtual;
 
-private Administrador adminAtual;
+    // ==================== MÉTODOS ADMIN ====================
 
-// ==================== MÉTODOS ADMIN ====================
+    // ==================== ADMIN ====================
 
-// ==================== ADMIN ====================
+    private void inicializarAdmin() {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            AdminRepository adminRepo = new AdminRepository(conn);
+            adminRepo.criarTabela();
+            adminRepo.inserirAdminPadrao();
 
-private void inicializarAdmin() {
-    try (Connection conn = ConnectionFactory.getConnection()) {
-        AdminRepository adminRepo = new AdminRepository(conn);
-        adminRepo.criarTabela();
-        adminRepo.inserirAdminPadrao();
-        
-        Administrador admin = adminRepo.findByEmail("admin@anunciosloc.com");
-        if (admin != null) {
-            System.out.println("========================================");
-            System.out.println("🔐 ADMIN INICIALIZADO");
-            System.out.println("📧 Email: admin@anunciosloc.com");
-            System.out.println("🔑 Password: admin123");
-            System.out.println("👤 Role: " + admin.getRole());
-            System.out.println("========================================");
+            Administrador admin = adminRepo.findByEmail("admin@anunciosloc.com");
+            if (admin != null) {
+                System.out.println("========================================");
+                System.out.println("🔐 ADMIN INICIALIZADO");
+                System.out.println("📧 Email: admin@anunciosloc.com");
+                System.out.println("🔑 Password: admin123");
+                System.out.println("👤 Role: " + admin.getRole());
+                System.out.println("========================================");
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Erro ao inicializar admin: " + e.getMessage());
         }
-    } catch (SQLException e) {
-        System.err.println("❌ Erro ao inicializar admin: " + e.getMessage());
     }
-}
 
-private void conectarAoKerberos() {
+ private void conectarAoKerberos() {
     try {
         URL wsdlUrl = new URL("http://localhost:8085/auth?wsdl");
-        QName qname = new QName("http://service.auth.anunciosloc.pt/", 
-                                "AuthServiceImplService");
+
+        // Namespace e nome do serviço
+        QName qname = new QName(
+            "http://service.auth.anunciosloc.pt/",
+            "AuthServiceImplService"
+        );
+
         Service service = Service.create(wsdlUrl, qname);
         this.authService = service.getPort(AuthService.class);
-        System.out.println("✅ Conectado ao Kerberos (porta 8085)");
+
+        System.out.println("Conectado ao Kerberos (porta 8085)");
     } catch (Exception e) {
-        System.err.println("⚠️ Erro ao conectar ao Kerberos: " + e.getMessage());
-        System.err.println("   O servidor Auth deve estar rodando na porta 8085");
+        System.err.println("Erro ao conectar ao Kerberos: " + e.getMessage());
+        e.printStackTrace();
+        this.authService = null;
     }
 }
+    // ==================== ADMIN LOGIN ====================
+    // ==================== ADMIN LOGIN ====================
 
-// ==================== ADMIN LOGIN ====================
-// ==================== ADMIN LOGIN ====================
+    @Override
+    public String loginAdmin(String email, String password) {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            // 1. Verificar se admin existe no banco
+            AdminRepository adminRepo = new AdminRepository(conn);
+            if (!adminRepo.existeAdmin(email)) {
+                return "Administrador nao encontrado";
+            }
 
-@Override
-public String loginAdmin(String email, String password) {
-    try (Connection conn = ConnectionFactory.getConnection()) {
-        // 1. Verificar se admin existe no banco
-        AdminRepository adminRepo = new AdminRepository(conn);
-        if (!adminRepo.existeAdmin(email)) {
-            return "Administrador nao encontrado";
+            // 2. Autenticar via Auth Service (Kerberos)
+            if (authService == null) {
+                return "Servidor de autenticacao indisponivel";
+            }
+
+            try {
+                // Chamar o Auth Service - usar solicitarTicketAdmin para SOAP
+                Ticket ticket = authService.solicitarTicketAdmin(email, password);
+
+                if (ticket != null && ticket.getTicketId() != null) {
+                    // 3. Atualizar ultimo acesso
+                    adminRepo.atualizarUltimoAcesso(email);
+
+                    return "Login realizado com sucesso\n" +
+                            "Ticket: " + ticket.getTicketId() + "\n" +
+                            "Email: " + ticket.getClienteEmail();
+                }
+
+                return "Credenciais invalidas";
+
+            } catch (Exception e) {
+                return "Erro na autenticacao: " + e.getMessage();
+            }
+
+        } catch (SQLException e) {
+            return "Erro no banco de dados: " + e.getMessage();
         }
-        
-        // 2. Autenticar via Auth Service (Kerberos)
-        if (authService == null) {
-            return "Servidor de autenticacao indisponivel";
+    }
+
+    @Override
+    public String getAdminInfo(String email) {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            AdminRepository adminRepo = new AdminRepository(conn);
+            Administrador admin = adminRepo.findByEmail(email);
+            if (admin == null) {
+                return "❌ Administrador não encontrado";
+            }
+            return "👤 Nome: " + admin.getNome() +
+                    "\n📧 Email: " + admin.getEmail() +
+                    "\n🔑 Role: " + admin.getRole() +
+                    "\n📅 Registo: " + admin.getDataRegisto();
+        } catch (SQLException e) {
+            return "❌ Erro: " + e.getMessage();
         }
-        
+    }
+
+    @Override
+    public String atualizarAdmin(String email, String nome, String password) {
+        try (Connection conn = ConnectionFactory.getConnection()) {
+            StringBuilder sql = new StringBuilder("UPDATE administradores SET ");
+            List<Object> params = new ArrayList<>();
+
+            if (nome != null && !nome.isEmpty()) {
+                sql.append("nome = ?, ");
+                params.add(nome);
+            }
+
+            if (password != null && !password.isEmpty()) {
+                sql.append("password_hash = ?, ");
+                params.add(hashPassword(password));
+            }
+
+            if (params.isEmpty()) {
+                return "❌ Nenhum campo para atualizar";
+            }
+
+            sql.setLength(sql.length() - 2);
+            sql.append(" WHERE email = ?");
+            params.add(email);
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+                for (int i = 0; i < params.size(); i++) {
+                    stmt.setObject(i + 1, params.get(i));
+                }
+                stmt.executeUpdate();
+            }
+            return "✅ Administrador atualizado com sucesso!";
+        } catch (SQLException e) {
+            return "❌ Erro: " + e.getMessage();
+        }
+    }
+
+    private String hashPassword(String password) {
         try {
-            // Chamar o Auth Service - usar solicitarTicketAdmin para SOAP
-            Ticket ticket = authService.solicitarTicketAdmin(email, password);
-            
-            if (ticket != null && ticket.getTicketId() != null) {
-                // 3. Atualizar ultimo acesso
-                adminRepo.atualizarUltimoAcesso(email);
-                
-                return "Login realizado com sucesso\n" +
-                       "Ticket: " + ticket.getTicketId() + "\n" +
-                       "Email: " + ticket.getClienteEmail();
-            }
-            
-            return "Credenciais invalidas";
-            
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(password.getBytes());
+            return Base64.getEncoder().encodeToString(hash);
         } catch (Exception e) {
-            return "Erro na autenticacao: " + e.getMessage();
+            return password;
         }
-        
-    } catch (SQLException e) {
-        return "Erro no banco de dados: " + e.getMessage();
     }
-}
 
-@Override
-public String getAdminInfo(String email) {
+    @Override
+public String cadastrarAdmin(String email, String password, String nome, String role) {
     try (Connection conn = ConnectionFactory.getConnection()) {
-        AdminRepository adminRepo = new AdminRepository(conn);
-        Administrador admin = adminRepo.findByEmail(email);
-        if (admin == null) {
-            return "❌ Administrador não encontrado";
-        }
-        return "👤 Nome: " + admin.getNome() +
-               "\n📧 Email: " + admin.getEmail() +
-               "\n🔑 Role: " + admin.getRole() +
-               "\n📅 Registo: " + admin.getDataRegisto();
-    } catch (SQLException e) {
-        return "❌ Erro: " + e.getMessage();
-    }
-}
-
-@Override
-public String atualizarAdmin(String email, String nome, String password) {
-    try (Connection conn = ConnectionFactory.getConnection()) {
-        StringBuilder sql = new StringBuilder("UPDATE administradores SET ");
-        List<Object> params = new ArrayList<>();
-        
-        if (nome != null && !nome.isEmpty()) {
-            sql.append("nome = ?, ");
-            params.add(nome);
-        }
-        
-        if (password != null && !password.isEmpty()) {
-            sql.append("password_hash = ?, ");
-            params.add(hashPassword(password));
-        }
-        
-        if (params.isEmpty()) {
-            return "❌ Nenhum campo para atualizar";
-        }
-        
-        sql.setLength(sql.length() - 2);
-        sql.append(" WHERE email = ?");
-        params.add(email);
-        
-        try (PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
-            for (int i = 0; i < params.size(); i++) {
-                stmt.setObject(i + 1, params.get(i));
+        // Verificar se já existe
+        String sqlCheck = "SELECT 1 FROM administradores WHERE email = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlCheck)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return "❌ Administrador já existe: " + email;
             }
-            stmt.executeUpdate();
         }
-        return "✅ Administrador atualizado com sucesso!";
+        
+        // Inserir novo admin
+        String sql = "INSERT INTO administradores (email, nome, password_hash, role, ativo) VALUES (?, ?, ?, ?, 1)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, email);
+            stmt.setString(2, nome);
+            stmt.setString(3, hashPassword(password));
+            stmt.setString(4, role != null && !role.isEmpty() ? role : "ADMIN");
+            stmt.executeUpdate();
+            
+            return "✅ Administrador cadastrado com sucesso!\n" +
+                   "📧 Email: " + email + "\n" +
+                   "👤 Nome: " + nome + "\n" +
+                   "🔑 Role: " + (role != null && !role.isEmpty() ? role : "ADMIN");
+        }
     } catch (SQLException e) {
-        return "❌ Erro: " + e.getMessage();
+        return "❌ Erro ao cadastrar admin: " + e.getMessage();
     }
 }
 
-private String hashPassword(String password) {
-    try {
-        java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
-        byte[] hash = md.digest(password.getBytes());
-        return Base64.getEncoder().encodeToString(hash);
-    } catch (Exception e) {
-        return password;
-    }
-}
+
 }
