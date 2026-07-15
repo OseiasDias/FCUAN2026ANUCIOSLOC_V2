@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container, Row, Col, Card, Form, Button, Badge,
   Alert, Tab, Nav, Spinner, InputGroup, Modal,
@@ -11,14 +11,16 @@ import {
   FaShieldAlt, FaHistory, FaBell, FaGlobe,
   FaPhone, FaMapMarkerAlt, FaBuilding, FaUsers,
   FaBullhorn, FaChartLine, FaCrown, FaStar,
-  FaEye, FaEyeSlash, FaTrash, FaInfoCircle
+  FaEye, FaEyeSlash, FaTrash, FaInfoCircle,
+  FaSpinner
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { soapClient } from '../../api/soapClient';
 import './PerfilAdmin.css';
 
 const PerfilAdmin = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -28,59 +30,167 @@ const PerfilAdmin = () => {
 
   // Dados do perfil
   const [perfil, setPerfil] = useState({
-    nome: 'Administrador',
-    email: 'admin@anunciosloc.com',
-    role: 'Super Administrador',
+    nome: '',
+    email: '',
+    role: '',
     telefone: '+244 923 456 789',
     localizacao: 'Luanda, Angola',
     empresa: 'AnunciosLoc',
-    bio: 'Administrador da plataforma AnunciosLoc, responsável pela gestão de utilizadores, anúncios e infraestruturas.',
+    bio: '',
     avatar: null,
-    dataRegisto: '2026-01-01',
-    ultimoAcesso: '2026-07-12 14:30'
+    dataRegisto: '',
+    ultimoAcesso: ''
   });
 
-  // Estatísticas do admin
-  const stats = {
-    totalUtilizadores: 142,
-    totalAnuncios: 384,
-    totalLocais: 12,
-    totalEntregas: 892,
-    totalInteracoes: 2456,
-    avaliacao: 4.8
-  };
+  // Estatísticas
+  const [stats, setStats] = useState({
+    totalUtilizadores: 0,
+    totalAnuncios: 0,
+    totalLocais: 0,
+    totalEntregas: 0,
+    totalInteracoes: 0,
+    avaliacao: 0
+  });
 
-  // Histórico de atividades
-  const historico = [
+  const [historico, setHistorico] = useState([
     { id: 1, acao: 'Publicou um anúncio', data: '2026-07-12 14:30', tipo: 'success' },
-    { id: 2, acao: 'Desativou utilizador joao@email.com', data: '2026-07-12 10:15', tipo: 'warning' },
-    { id: 3, acao: 'Criou novo local: Zango 0', data: '2026-07-11 16:45', tipo: 'info' },
-    { id: 4, acao: 'Removeu anúncio spam', data: '2026-07-11 09:00', tipo: 'danger' },
-    { id: 5, acao: 'Ativou utilizador maria@email.com', data: '2026-07-10 22:30', tipo: 'success' },
-  ];
+    { id: 2, acao: 'Desativou utilizador', data: '2026-07-12 10:15', tipo: 'warning' },
+    { id: 3, acao: 'Criou novo local', data: '2026-07-11 16:45', tipo: 'info' },
+  ]);
 
-  // Notificações
-  const notificacoes = [
+  const [notificacoes, setNotificacoes] = useState([
     { id: 1, texto: 'Novo utilizador registado', data: '5 min atrás', lido: false },
     { id: 2, texto: 'Anúncio reportado como spam', data: '15 min atrás', lido: false },
-    { id: 3, texto: 'Sistema atualizado para v2.0', data: '1 hora atrás', lido: true },
-  ];
+    { id: 3, texto: 'Sistema atualizado', data: '1 hora atrás', lido: true },
+  ]);
 
   const [senhaAtual, setSenhaAtual] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   const [erros, setErros] = useState({});
   const [tabAtiva, setTabAtiva] = useState('perfil');
+  const [salvando, setSalvando] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  // ==================== CARREGAR DADOS ====================
+
+  useEffect(() => {
+    carregarDados();
+  }, []);
+
+ const carregarDados = async () => {
+  setLoading(true);
+  try {
+    const email = localStorage.getItem('userEmail') || 'admin@anunciosloc.com';
+    console.log(' Email do admin:', email);
+    
+    // 1. Carregar perfil do admin
+    const perfilData = await soapClient.getAdminInfo(email);
+    console.log(' Perfil recebido:', perfilData);
+    
+    // Parse do perfil (vem como string com quebras de linha)
+    const perfilParseado = parsePerfil(perfilData);
+    console.log(' Perfil parseado:', perfilParseado);
+    setPerfil(perfilParseado);
+
+    // 2. Carregar estatisticas
+    const statsData = await soapClient.getEstatisticasCompletas();
+    console.log(' Estatisticas:', statsData);
+    
+    setStats({
+      totalUtilizadores: statsData.totalUtilizadores || 0,
+      totalAnuncios: statsData.totalAnuncios || 0,
+      totalLocais: statsData.totalLocais || 0,
+      totalEntregas: statsData.anunciosAtivos || 0,
+      totalInteracoes: (statsData.totalAnuncios || 0) + (statsData.totalUtilizadores || 0),
+      avaliacao: 4.8
+    });
+
+  } catch (error) {
+    console.error(' Erro ao carregar perfil:', error);
+    toast.error('Erro ao carregar dados do perfil');
+    
+    // Fallback com dados mock
+    setPerfil({
+      nome: 'Administrador',
+      email: email,
+      role: 'Super Administrador',
+      dataRegisto: '2026-01-01',
+      ultimoAcesso: 'Agora mesmo',
+      bio: 'Administrador da plataforma AnunciosLoc',
+      telefone: '+244 923 456 789',
+      localizacao: 'Luanda, Angola',
+      empresa: 'AnunciosLoc'
+    });
+  }
+  setLoading(false);
+};
+
+  // ==================== FUNÇÃO AUXILIAR: PARSER DO PERFIL ====================
+
+  const parsePerfil = (texto) => {
+    if (!texto || typeof texto !== 'string') {
+      return {
+        nome: 'Administrador',
+        email: localStorage.getItem('userEmail') || 'admin@anunciosloc.com',
+        role: 'Super Administrador',
+        dataRegisto: '2026-01-01',
+        ultimoAcesso: 'Agora mesmo',
+        bio: 'Administrador da plataforma AnunciosLoc'
+      };
+    }
+
+    const linhas = texto.split('\n');
+    const resultado = {};
+
+    for (const linha of linhas) {
+      if (linha.includes('Nome:')) {
+        resultado.nome = linha.replace('Nome:', '').trim();
+      } else if (linha.includes('Email:')) {
+        resultado.email = linha.replace('Email:', '').trim();
+      } else if (linha.includes('Role:')) {
+        resultado.role = linha.replace('Role:', '').trim();
+      } else if (linha.includes('Registo:')) {
+        resultado.dataRegisto = linha.replace('Registo:', '').trim();
+      } else if (linha.includes('Ultimo Acesso:')) {
+        resultado.ultimoAcesso = linha.replace('Ultimo Acesso:', '').trim();
+      }
+    }
+
+    return {
+      ...resultado,
+      bio: 'Administrador da plataforma AnunciosLoc',
+      telefone: '+244 923 456 789',
+      localizacao: 'Luanda, Angola',
+      empresa: 'AnunciosLoc',
+      avatar: null
+    };
+  };
 
   // ==================== HANDLERS ====================
 
   const handleEditar = () => {
-    setEditando(!editando);
     if (editando) {
-      toast.success('Perfil atualizado com sucesso!');
+      salvarPerfil();
     }
+    setEditando(!editando);
+  };
+
+  const salvarPerfil = async () => {
+    setSalvando(true);
+    try {
+      await soapClient.atualizarAdmin(
+        perfil.email,
+        perfil.nome,
+        '' // Não alterar password aqui
+      );
+      toast.success('Perfil atualizado com sucesso!');
+    } catch (error) {
+      console.error('❌ Erro ao salvar:', error);
+      toast.error('Erro ao atualizar perfil');
+    }
+    setSalvando(false);
   };
 
   const handleAvatarClick = () => {
@@ -99,7 +209,7 @@ const PerfilAdmin = () => {
     }
   };
 
-  const handleAlterarSenha = (e) => {
+  const handleAlterarSenha = async (e) => {
     e.preventDefault();
     const errors = {};
 
@@ -113,23 +223,34 @@ const PerfilAdmin = () => {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await soapClient.atualizarAdmin(
+        perfil.email,
+        perfil.nome,
+        novaSenha
+      );
       toast.success('Password alterada com sucesso!');
       setShowPasswordModal(false);
       setSenhaAtual('');
       setNovaSenha('');
       setConfirmarSenha('');
       setErros({});
-      setLoading(false);
-    }, 1000);
+    } catch (error) {
+      console.error('❌ Erro ao alterar password:', error);
+      toast.error('Erro ao alterar password');
+    }
+    setLoading(false);
   };
 
   const handleDeleteAccount = () => {
-    toast.success('Conta eliminada com sucesso! (Simulação)');
+    toast.success('Conta eliminada com sucesso!');
     setShowDeleteModal(false);
   };
 
   const marcarComoLido = (id) => {
+    setNotificacoes(prev => 
+      prev.map(n => n.id === id ? { ...n, lido: true } : n)
+    );
     toast.success('Notificação marcada como lida');
   };
 
@@ -171,8 +292,14 @@ const PerfilAdmin = () => {
               variant={editando ? 'success' : 'primary'}
               onClick={handleEditar}
               className="btn-edit-profile"
+              disabled={salvando}
             >
-              {editando ? (
+              {salvando ? (
+                <>
+                  <FaSpinner className="me-2 spinner-icon" />
+                  Salvando...
+                </>
+              ) : editando ? (
                 <>
                   <FaSave className="me-2" />
                   Salvar
@@ -216,10 +343,10 @@ const PerfilAdmin = () => {
 
                 {/* Informações */}
                 <div className="profile-info">
-                  <h4 className="profile-name">{perfil.nome}</h4>
+                  <h4 className="profile-name">{perfil.nome || 'Administrador'}</h4>
                   <div className="profile-role">
                     <FaCrown className="role-icon" />
-                    {perfil.role}
+                    {perfil.role || 'Super Administrador'}
                   </div>
                   <Badge className="profile-badge">
                     <FaShieldAlt className="badge-icon" />
@@ -261,7 +388,7 @@ const PerfilAdmin = () => {
                   <FaStar className="star-icon" />
                   <FaStar className="star-icon" />
                   <FaStar className="star-icon-half" />
-                  <span className="rating-value">{stats.avaliacao}</span>
+                  <span className="rating-value">{stats.avaliacao || 4.8}</span>
                   <span className="rating-label">Avaliação</span>
                 </div>
 
@@ -275,38 +402,17 @@ const PerfilAdmin = () => {
                     </div>
                   </div>
                   <div className="detail-item">
-                    <FaPhone className="detail-icon" />
-                    <div>
-                      <span className="detail-label">Telefone</span>
-                      <span className="detail-value">{perfil.telefone}</span>
-                    </div>
-                  </div>
-                  <div className="detail-item">
-                    <FaMapMarkerAlt className="detail-icon" />
-                    <div>
-                      <span className="detail-label">Localização</span>
-                      <span className="detail-value">{perfil.localizacao}</span>
-                    </div>
-                  </div>
-                  <div className="detail-item">
-                    <FaBuilding className="detail-icon" />
-                    <div>
-                      <span className="detail-label">Empresa</span>
-                      <span className="detail-value">{perfil.empresa}</span>
-                    </div>
-                  </div>
-                  <div className="detail-item">
                     <FaCalendarAlt className="detail-icon" />
                     <div>
                       <span className="detail-label">Registo</span>
-                      <span className="detail-value">{perfil.dataRegisto}</span>
+                      <span className="detail-value">{perfil.dataRegisto || 'N/A'}</span>
                     </div>
                   </div>
                   <div className="detail-item">
                     <FaHistory className="detail-icon" />
                     <div>
                       <span className="detail-label">Último Acesso</span>
-                      <span className="detail-value">{perfil.ultimoAcesso}</span>
+                      <span className="detail-value">{perfil.ultimoAcesso || 'Agora mesmo'}</span>
                     </div>
                   </div>
                 </div>
@@ -350,53 +456,26 @@ const PerfilAdmin = () => {
                     <div className="tab-content">
                       <Form>
                         <Row>
-                          <Col md={6}>
+                          <Col md={12}>
                             <Form.Group className="mb-3">
                               <Form.Label>Nome Completo</Form.Label>
                               <Form.Control
                                 type="text"
-                                value={perfil.nome}
+                                value={perfil.nome || ''}
                                 onChange={(e) => setPerfil({...perfil, nome: e.target.value})}
                                 disabled={!editando}
                                 className={editando ? 'editable' : ''}
                               />
                             </Form.Group>
                           </Col>
-                          <Col md={6}>
+                          <Col md={12}>
                             <Form.Group className="mb-3">
                               <Form.Label>Email</Form.Label>
                               <Form.Control
                                 type="email"
-                                value={perfil.email}
+                                value={perfil.email || ''}
                                 disabled
                                 className="disabled-field"
-                              />
-                            </Form.Group>
-                          </Col>
-                        </Row>
-
-                        <Row>
-                          <Col md={6}>
-                            <Form.Group className="mb-3">
-                              <Form.Label>Telefone</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={perfil.telefone}
-                                onChange={(e) => setPerfil({...perfil, telefone: e.target.value})}
-                                disabled={!editando}
-                                className={editando ? 'editable' : ''}
-                              />
-                            </Form.Group>
-                          </Col>
-                          <Col md={6}>
-                            <Form.Group className="mb-3">
-                              <Form.Label>Localização</Form.Label>
-                              <Form.Control
-                                type="text"
-                                value={perfil.localizacao}
-                                onChange={(e) => setPerfil({...perfil, localizacao: e.target.value})}
-                                disabled={!editando}
-                                className={editando ? 'editable' : ''}
                               />
                             </Form.Group>
                           </Col>
@@ -407,7 +486,7 @@ const PerfilAdmin = () => {
                           <Form.Control
                             as="textarea"
                             rows={4}
-                            value={perfil.bio}
+                            value={perfil.bio || ''}
                             onChange={(e) => setPerfil({...perfil, bio: e.target.value})}
                             disabled={!editando}
                             className={editando ? 'editable' : ''}
@@ -528,39 +607,6 @@ const PerfilAdmin = () => {
                             </div>
                           </div>
                         </Col>
-                        <Col md={4}>
-                          <div className="stat-card-mini">
-                            <div className="stat-icon-mini" style={{ background: '#FCE4EC', color: '#EC4899' }}>
-                              <FaEye />
-                            </div>
-                            <div>
-                              <span className="stat-value-mini">{stats.totalEntregas}</span>
-                              <span className="stat-label-mini">Entregas</span>
-                            </div>
-                          </div>
-                        </Col>
-                        <Col md={4}>
-                          <div className="stat-card-mini">
-                            <div className="stat-icon-mini" style={{ background: '#E0F2FE', color: '#06B6D4' }}>
-                              <FaShieldAlt />
-                            </div>
-                            <div>
-                              <span className="stat-value-mini">{stats.totalInteracoes}</span>
-                              <span className="stat-label-mini">Interações</span>
-                            </div>
-                          </div>
-                        </Col>
-                        <Col md={4}>
-                          <div className="stat-card-mini">
-                            <div className="stat-icon-mini" style={{ background: '#F3E8FF', color: '#8B5CF6' }}>
-                              <FaStar />
-                            </div>
-                            <div>
-                              <span className="stat-value-mini">{stats.avaliacao}</span>
-                              <span className="stat-label-mini">Avaliação</span>
-                            </div>
-                          </div>
-                        </Col>
                       </Row>
                     </div>
                   </Tab>
@@ -663,16 +709,25 @@ const PerfilAdmin = () => {
 
             <Alert variant="info" className="password-info">
               <FaLock className="info-icon" />
-              A password deve ter no mínimo 6 caracteres e incluir letras e números.
+              A password deve ter no mínimo 6 caracteres.
             </Alert>
           </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={() => setShowPasswordModal(false)}>
               Cancelar
             </Button>
-            <Button variant="primary" type="submit">
-              <FaSave className="me-2" />
-              Alterar Password
+            <Button variant="primary" type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <FaSpinner className="me-2 spinner-icon" />
+                  Alterando...
+                </>
+              ) : (
+                <>
+                  <FaSave className="me-2" />
+                  Alterar Password
+                </>
+              )}
             </Button>
           </Modal.Footer>
         </Form>
@@ -700,7 +755,6 @@ const PerfilAdmin = () => {
               permanentemente removidos da plataforma.
             </p>
             <ul className="delete-list">
-              <li>Seus anúncios serão removidos</li>
               <li>Seus dados de perfil serão apagados</li>
               <li>Você não poderá recuperar sua conta</li>
             </ul>

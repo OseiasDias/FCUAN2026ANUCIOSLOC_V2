@@ -64,15 +64,15 @@ const Login = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      // ✅ CHAMADA REAL AO BACKEND SOAP
       const result = await loginAdmin(email, password);
 
       if (result.success) {
         toast.success('Login realizado com sucesso!');
 
-        // Guardar sessão
-        localStorage.setItem('userEmail', email);
+
         localStorage.setItem('userLogged', 'true');
+        localStorage.setItem('userEmail', email);
+        localStorage.setItem('adminName', email.split('@')[0]);
 
         // Chamar callback do parent
         setTimeout(() => {
@@ -90,6 +90,7 @@ const Login = ({ onLogin }) => {
 
     setLoading(false);
   };
+
   // ==================== RECUPERAÇÃO DE SENHA ====================
 
   const handleForgotPassword = () => {

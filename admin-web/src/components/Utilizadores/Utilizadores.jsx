@@ -40,9 +40,19 @@ const Utilizadores = () => {
     setLoading(true);
     try {
       const data = await soapClient.listarUtilizadores();
-      setUtilizadores(data);
+      console.log('📦 Utilizadores recebidos:', data);
+      
+      // Garantir que os dados são um array
+      if (Array.isArray(data)) {
+        setUtilizadores(data);
+      } else {
+        console.warn('⚠️ Dados não são um array:', data);
+        setUtilizadores([]);
+      }
     } catch (error) {
+      console.error('❌ Erro ao carregar utilizadores:', error);
       toast.error('Erro ao carregar utilizadores');
+      setUtilizadores([]);
     }
     setLoading(false);
   };
@@ -98,7 +108,7 @@ const Utilizadores = () => {
     }
 
     try {
-      // Chamar API para criar utilizador
+      await soapClient.ativarUtilizador(novoUtilizador.email, novoUtilizador.password, novoUtilizador.nome);
       toast.success('Utilizador criado com sucesso');
       setShowModal(false);
       setNovoUtilizador({ email: '', nome: '', password: '', confirmPassword: '' });
@@ -114,20 +124,36 @@ const Utilizadores = () => {
     setShowDetailModal(true);
   };
 
+  // ==================== FILTER USERS (COM VERIFICAÇÃO) ====================
+  
   const filteredUsers = utilizadores.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.nome.toLowerCase().includes(searchTerm.toLowerCase());
+    // ✅ VERIFICAR SE user EXISTE
+    if (!user) return false;
+    
+    // ✅ VERIFICAR SE TEM email E nome
+    const email = user.email || '';
+    const nome = user.nome || '';
+    const searchLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = email.toLowerCase().includes(searchLower) ||
+                          nome.toLowerCase().includes(searchLower);
+    
+    // ✅ VERIFICAR SE TEM O CAMPO 'ativo'
+    const isAtivo = user.ativo !== undefined ? user.ativo : true;
     const matchesStatus = filterStatus === 'todos' || 
-                         (filterStatus === 'ativos' && user.ativo) ||
-                         (filterStatus === 'inativos' && !user.ativo);
+                         (filterStatus === 'ativos' && isAtivo) ||
+                         (filterStatus === 'inativos' && !isAtivo);
+    
     return matchesSearch && matchesStatus;
   });
 
+  // ==================== STATS (COM VERIFICAÇÃO) ====================
+
   const stats = {
     total: utilizadores.length,
-    ativos: utilizadores.filter(u => u.ativo).length,
-    inativos: utilizadores.filter(u => !u.ativo).length,
-    saldoTotal: utilizadores.reduce((acc, u) => acc + (u.saldo || 0), 0)
+    ativos: utilizadores.filter(u => u && u.ativo !== undefined ? u.ativo : true).length,
+    inativos: utilizadores.filter(u => u && !u.ativo).length,
+    saldoTotal: utilizadores.reduce((acc, u) => acc + (u?.saldo || 0), 0)
   };
 
   if (loading) {
@@ -286,7 +312,7 @@ const Utilizadores = () => {
                   <AnimatePresence>
                     {filteredUsers.map((user, index) => (
                       <motion.tr
-                        key={user.email}
+                        key={user?.email || index}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
@@ -295,13 +321,13 @@ const Utilizadores = () => {
                         <td>
                           <div className="user-info">
                             <div className="user-avatar">
-                              {user.nome?.charAt(0).toUpperCase() || 'U'}
+                              {user?.nome?.charAt(0).toUpperCase() || 'U'}
                             </div>
                             <div>
-                              <div className="user-name">{user.nome || 'Sem nome'}</div>
+                              <div className="user-name">{user?.nome || 'Sem nome'}</div>
                               <div className="user-email">
                                 <FaEnvelope className="email-icon" />
-                                {user.email}
+                                {user?.email || 'Sem email'}
                               </div>
                             </div>
                           </div>
@@ -309,14 +335,14 @@ const Utilizadores = () => {
                         <td>
                           <span className="user-saldo">
                             <FaCoins className="saldo-icon" />
-                            {user.saldo || 0} pts
+                            {user?.saldo || 0} pts
                           </span>
                         </td>
                         <td>
                           <Badge 
-                            className={`status-badge ${user.ativo ? 'status-active' : 'status-inactive'}`}
+                            className={`status-badge ${user?.ativo ? 'status-active' : 'status-inactive'}`}
                           >
-                            {user.ativo ? (
+                            {user?.ativo ? (
                               <>
                                 <span className="status-dot active"></span>
                                 Ativo
@@ -332,7 +358,7 @@ const Utilizadores = () => {
                         <td>
                           <div className="user-data">
                             <FaCalendarAlt className="data-icon" />
-                            {user.dataRegisto || 'N/A'}
+                            {user?.dataRegisto || 'N/A'}
                           </div>
                         </td>
                         <td>
@@ -353,15 +379,15 @@ const Utilizadores = () => {
 
                             <OverlayTrigger
                               placement="top"
-                              overlay={<Tooltip>{user.ativo ? 'Desativar' : 'Ativar'}</Tooltip>}
+                              overlay={<Tooltip>{user?.ativo ? 'Desativar' : 'Ativar'}</Tooltip>}
                             >
                               <Button
-                                variant={user.ativo ? 'outline-warning' : 'outline-success'}
+                                variant={user?.ativo ? 'outline-warning' : 'outline-success'}
                                 size="sm"
                                 className="action-btn toggle-btn"
-                                onClick={() => user.ativo ? handleDesativar(user.email) : handleAtivar(user.email)}
+                                onClick={() => user?.ativo ? handleDesativar(user.email) : handleAtivar(user.email)}
                               >
-                                {user.ativo ? <FaTimes /> : <FaCheck />}
+                                {user?.ativo ? <FaTimes /> : <FaCheck />}
                               </Button>
                             </OverlayTrigger>
 
@@ -373,7 +399,7 @@ const Utilizadores = () => {
                                 variant="outline-danger"
                                 size="sm"
                                 className="action-btn delete-btn"
-                                onClick={() => handleEliminar(user.email)}
+                                onClick={() => handleEliminar(user?.email)}
                               >
                                 <FaTrash />
                               </Button>
@@ -517,30 +543,30 @@ const Utilizadores = () => {
           {selectedUser && (
             <div className="user-detail-content">
               <div className="detail-avatar">
-                {selectedUser.nome?.charAt(0).toUpperCase() || 'U'}
+                {selectedUser?.nome?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div className="detail-info">
                 <div className="detail-row">
                   <strong>Nome</strong>
-                  <span>{selectedUser.nome || 'N/A'}</span>
+                  <span>{selectedUser?.nome || 'N/A'}</span>
                 </div>
                 <div className="detail-row">
                   <strong>Email</strong>
-                  <span>{selectedUser.email}</span>
+                  <span>{selectedUser?.email || 'N/A'}</span>
                 </div>
                 <div className="detail-row">
                   <strong>Saldo</strong>
-                  <span className="detail-saldo">{selectedUser.saldo || 0} pts</span>
+                  <span className="detail-saldo">{selectedUser?.saldo || 0} pts</span>
                 </div>
                 <div className="detail-row">
                   <strong>Status</strong>
-                  <Badge className={selectedUser.ativo ? 'status-active' : 'status-inactive'}>
-                    {selectedUser.ativo ? 'Ativo' : 'Inativo'}
+                  <Badge className={selectedUser?.ativo ? 'status-active' : 'status-inactive'}>
+                    {selectedUser?.ativo ? 'Ativo' : 'Inativo'}
                   </Badge>
                 </div>
                 <div className="detail-row">
                   <strong>Data Registo</strong>
-                  <span>{selectedUser.dataRegisto || 'N/A'}</span>
+                  <span>{selectedUser?.dataRegisto || 'N/A'}</span>
                 </div>
               </div>
             </div>

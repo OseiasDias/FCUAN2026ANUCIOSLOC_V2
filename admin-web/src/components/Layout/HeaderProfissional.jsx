@@ -16,6 +16,7 @@ import {
 } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import './HeaderProfissional.css';
 
 const HeaderProfissional = ({ 
@@ -29,16 +30,31 @@ const HeaderProfissional = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Dados do usuário (do localStorage)
+  const [userData, setUserData] = useState({
+    name: 'Administrador',
+    email: 'admin@anunciosloc.com',
+    role: 'Super Admin'
+  });
+
   const location = useLocation();
   const navigate = useNavigate();
   const userMenuRef = useRef(null);
   const notificationRef = useRef(null);
 
-  const notifications = [
+  // Carregar dados do usuário do localStorage
+  useEffect(() => {
+    const name = localStorage.getItem('adminName') || 'Administrador';
+    const email = localStorage.getItem('adminEmail') || 'admin@anunciosloc.com';
+    setUserData({ name, email, role: 'Super Admin' });
+  }, []);
+
+  // Notificações (mock)
+  const [notifications, setNotifications] = useState([
     { id: 1, text: 'Novo utilizador registado', time: '5 min atrás', read: false, icon: 'user' },
     { id: 2, text: 'Anúncio reportado como spam', time: '15 min atrás', read: false, icon: 'flag' },
     { id: 3, text: 'Sistema atualizado para v2.0', time: '1 hora atrás', read: true, icon: 'update' },
-  ];
+  ]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -49,7 +65,8 @@ const HeaderProfissional = ({
       '/utilizadores': 'Utilizadores',
       '/anuncios': 'Anúncios',
       '/locais': 'Locais',
-      '/estatisticas': 'Estatísticas',
+      '/perfil': 'Meu Perfil',
+      '/setup': 'Assistência Interativa',
       '/configuracoes': 'Configurações'
     };
     return titles[path] || 'Dashboard';
@@ -62,7 +79,8 @@ const HeaderProfissional = ({
       '/utilizadores': 'Gerir todos os utilizadores',
       '/anuncios': 'Moderar anúncios da plataforma',
       '/locais': 'Gerir infraestruturas e locais',
-      '/estatisticas': 'Análise de dados da plataforma',
+      '/perfil': 'Gerir as suas informações pessoais',
+      '/setup': 'Configuração e assistência interativa',
       '/configuracoes': 'Definições do sistema'
     };
     return subtitles[path] || '';
@@ -83,7 +101,14 @@ const HeaderProfissional = ({
   };
 
   const markAllAsRead = () => {
-    // Marcar todas como lidas
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    toast.success('Todas as notificações marcadas como lidas');
+  };
+
+  const markAsRead = (id) => {
+    setNotifications(prev => prev.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
   };
 
   // Fechar dropdowns ao clicar fora
@@ -184,7 +209,11 @@ const HeaderProfissional = ({
                     </div>
                   ) : (
                     notifications.map((notif) => (
-                      <div key={notif.id} className={`notification-item ${notif.read ? 'read' : 'unread'}`}>
+                      <div 
+                        key={notif.id} 
+                        className={`notification-item ${notif.read ? 'read' : 'unread'}`}
+                        onClick={() => markAsRead(notif.id)}
+                      >
                         <div className="notification-dot"></div>
                         <div className="notification-content">
                           <p className="notification-text">{notif.text}</p>
@@ -207,7 +236,7 @@ const HeaderProfissional = ({
           {isDarkMode ? <FaSun /> : <FaMoon />}
         </button>
 
-        {/* Perfil do usuário */}
+        {/* Perfil do usuário - COM DADOS REAIS */}
         <div className="user-profile-wrapper" ref={userMenuRef}>
           <div className="user-profile" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}>
             <div className="user-avatar-wrapper">
@@ -215,8 +244,8 @@ const HeaderProfissional = ({
               <span className="user-status"></span>
             </div>
             <div className="user-info">
-              <span className="user-name">Administrador</span>
-              <span className="user-role">Super Admin</span>
+              <span className="user-name">{userData.name}</span>
+              <span className="user-role">{userData.role}</span>
             </div>
             <FaChevronDown className={`dropdown-arrow ${isUserMenuOpen ? 'open' : ''}`} />
           </div>
@@ -233,21 +262,21 @@ const HeaderProfissional = ({
                 <div className="dropdown-user-info">
                   <FaUserCircle className="dropdown-avatar" />
                   <div>
-                    <div className="dropdown-user-name">Administrador</div>
-                    <div className="dropdown-user-email">admin@anunciosloc.com</div>
+                    <div className="dropdown-user-name">{userData.name}</div>
+                    <div className="dropdown-user-email">{userData.email}</div>
                   </div>
                 </div>
                 <div className="dropdown-divider"></div>
-                <button className="dropdown-item" onClick={() => navigate('/perfil')}>
+                <button className="dropdown-item" onClick={() => { navigate('/perfil'); setIsUserMenuOpen(false); }}>
                   <FaUser />
                   <span>Meu Perfil</span>
                 </button>
-                <button className="dropdown-item" onClick={() => navigate('/configuracoes')}>
+                <button className="dropdown-item" onClick={() => { navigate('/configuracoes'); setIsUserMenuOpen(false); }}>
                   <FaCog />
                   <span>Configurações</span>
                 </button>
                 <div className="dropdown-divider"></div>
-                <button className="dropdown-item logout" onClick={onLogout}>
+                <button className="dropdown-item logout" onClick={() => { setIsUserMenuOpen(false); onLogout(); }}>
                   <FaSignOutAlt />
                   <span>Sair do Sistema</span>
                 </button>

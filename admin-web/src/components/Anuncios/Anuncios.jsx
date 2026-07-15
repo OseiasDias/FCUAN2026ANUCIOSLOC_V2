@@ -285,7 +285,7 @@ const Anuncios = () => {
                           </div>
                         </td>
                         <td>
-                          <Badge className="local-badge">
+                          <Badge className="local-badge text-white">
                             <FaMapMarkerAlt className="local-icon" />
                             {anuncio.local || 'N/A'}
                           </Badge>

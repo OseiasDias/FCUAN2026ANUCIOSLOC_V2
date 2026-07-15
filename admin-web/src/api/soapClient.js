@@ -179,7 +179,7 @@ listarAnuncios: async () => {
       timeout: 15000,
     });
     
-    console.log('📥 Resposta bruta:', response.data);
+    console.log(' Resposta bruta:', response.data);
     
     // Extrair todos os <item> do XML
     const items = [];
@@ -190,7 +190,7 @@ listarAnuncios: async () => {
       items.push(match[1].trim());
     }
     
-    console.log('📦 Itens extraídos:', items);
+    console.log(' Itens extraídos:', items);
     
     // Converter cada item em um objeto de anúncio
     const anuncios = items.map((item, index) => {
@@ -255,4 +255,213 @@ listarAnuncios: async () => {
     });
     return extractList(response.data, 'item');
   },
+
+
+  // ============ ADMIN ============
+
+getAdminInfo: async (email) => {
+  try {
+    const envelope = createSoapEnvelope('getAdminInfo', { email });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    console.log(' Resposta getAdminInfo:', response.data);
+    
+    // Extrair o return
+    const result = extractResponse(response.data, 'return');
+    console.log(' Admin info:', result);
+    
+    return result || 'Informação não disponível';
+  } catch (error) {
+    console.error(' Erro ao buscar admin info:', error);
+    throw error;
+  }
+},
+
+atualizarAdmin: async (email, nome, password) => {
+  try {
+    const params = { email };
+    
+    // Só adicionar nome se não estiver vazio
+    if (nome && nome.trim() !== '') {
+      params.nome = nome;
+    }
+    
+    // Só adicionar password se não estiver vazio
+    if (password && password.trim() !== '') {
+      params.password = password;
+    }
+    
+    const envelope = createSoapEnvelope('atualizarAdmin', params);
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    console.log(' Resposta atualizarAdmin:', response.data);
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Admin atualizado com sucesso!';
+  } catch (error) {
+    console.error(' Erro ao atualizar admin:', error);
+    throw error;
+  }
+},
+
+cadastrarAdmin: async (email, password, nome, role) => {
+  try {
+    const envelope = createSoapEnvelope('cadastrarAdmin', {
+      email,
+      password,
+      nome,
+      role: role || 'ADMIN'
+    });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Admin cadastrado com sucesso!';
+  } catch (error) {
+    console.error(' Erro ao cadastrar admin:', error);
+    throw error;
+  }
+},
+
+
+// ============ UTILIZADORES (ADMIN) ============
+
+listarUtilizadores: async () => {
+  try {
+    const envelope = createSoapEnvelope('listarUtilizadores', {});
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    console.log('📥 Resposta listarUtilizadores:', response.data);
+    
+    // Extrair os itens
+    const items = extractList(response.data, 'item');
+    console.log('📦 Itens extraídos:', items);
+    
+    // Converter cada item em objeto
+    const utilizadores = items.map((item) => {
+      // Formato: "admin@anunciosloc.com | Administrador | Saldo: 1000"
+      const partes = item.split(' | ');
+      return {
+        email: partes[0] || '',
+        nome: partes[1] || 'Utilizador',
+        saldo: parseInt(partes[2]?.replace('Saldo: ', '') || 0),
+        ativo: true,
+        dataRegisto: new Date().toISOString().split('T')[0]
+      };
+    });
+    
+    console.log('✅ Utilizadores processados:', utilizadores);
+    return utilizadores;
+  } catch (error) {
+    console.error('❌ Erro ao listar utilizadores:', error);
+    throw error;
+  }
+},
+
+ativarUtilizador: async (email, password, nome) => {
+  try {
+    const envelope = createSoapEnvelope('ativarUtilizador', { email, password, nome });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Utilizador ativado com sucesso!';
+  } catch (error) {
+    console.error('❌ Erro ao ativar utilizador:', error);
+    throw error;
+  }
+},
+
+desativarUtilizador: async (email) => {
+  try {
+    const envelope = createSoapEnvelope('desativarConta', { email });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Utilizador desativado com sucesso!';
+  } catch (error) {
+    console.error('❌ Erro ao desativar utilizador:', error);
+    throw error;
+  }
+},
+
+ativarUtilizadorAdmin: async (email) => {
+  try {
+    const envelope = createSoapEnvelope('reativarConta', { email });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Utilizador reativado com sucesso!';
+  } catch (error) {
+    console.error('❌ Erro ao reativar utilizador:', error);
+    throw error;
+  }
+},
+
+eliminarUtilizador: async (email) => {
+  try {
+    const envelope = createSoapEnvelope('eliminarUtilizador', { email });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Utilizador eliminado com sucesso!';
+  } catch (error) {
+    console.error('❌ Erro ao eliminar utilizador:', error);
+    throw error;
+  }
+},
+
+obterUtilizador: async (email) => {
+  try {
+    const envelope = createSoapEnvelope('obterUtilizador', { email });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Utilizador não encontrado';
+  } catch (error) {
+    console.error('❌ Erro ao obter utilizador:', error);
+    throw error;
+  }
+},
+
+atualizarSaldo: async (email, novoSaldo) => {
+  try {
+    const envelope = createSoapEnvelope('atualizarSaldo', { email, novoSaldo });
+    const response = await axios.post(SOAP_API_URL, envelope, {
+      headers: { 'Content-Type': 'text/xml' },
+      timeout: 15000,
+    });
+    
+    const result = extractResponse(response.data, 'return');
+    return result || 'Saldo atualizado com sucesso!';
+  } catch (error) {
+    console.error('❌ Erro ao atualizar saldo:', error);
+    throw error;
+  }
+},
 };
