@@ -82,16 +82,20 @@ const carregarDados = async () => {
     const stats = await soapClient.getEstatisticasCompletas();
     setEstatisticas(stats);
 
-    // 2. Carregar anuncios
+    // 2. Carregar anuncios - JÁ VÊM COMO OBJETOS!
     const anuncios = await soapClient.listarAnuncios();
     console.log(' Anuncios recebidos:', anuncios);
+    console.log(' Tipo do primeiro:', typeof anuncios[0]);
     
-    // CORREÇÃO: Os anuncios JÁ SÃO OBJETOS!
-    // Não precisa fazer parsing novamente
+    // Os anuncios já são objetos com id, autor, conteudo, local, data
+    // Não precisa fazer parsing!
     setUltimosAnuncios(anuncios.slice(0, 5));
 
     // 3. Carregar locais
     const locaisData = await soapClient.listarLocaisCoordenadas();
+    console.log(' Locais recebidos:', locaisData);
+    
+    // Processar locais (strings com pipe)
     const locaisFormatados = locaisData.map((item) => {
       if (typeof item === 'string' && item.includes('|')) {
         const partes = item.split('|');
@@ -111,6 +115,12 @@ const carregarDados = async () => {
       };
     });
     setLocais(locaisFormatados);
+
+    // 4. Atualizar dados do grafico de status
+    setDadosStatus([
+      { name: 'Ativos', value: stats.anunciosAtivos || 0, color: '#22C55E' },
+      { name: 'Expirados', value: stats.anunciosExpirados || 0, color: '#EF4444' },
+    ]);
 
   } catch (error) {
     console.error(' Erro ao carregar dados:', error);
