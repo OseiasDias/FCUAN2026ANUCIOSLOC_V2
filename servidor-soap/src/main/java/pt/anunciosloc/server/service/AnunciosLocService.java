@@ -190,4 +190,39 @@ String cadastrarAdmin(@WebParam(name = "email") String email,
                       @WebParam(name = "password") String password,
                       @WebParam(name = "nome") String nome,
                       @WebParam(name = "role") String role);         
-                }
+              
+              
+              
+
+                      // ==================== ESTATISTICAS / CONTAGENS ====================
+
+@WebMethod
+int contarUtilizadores();
+
+@WebMethod
+int contarAnuncios();
+
+@WebMethod
+int contarAnunciosPorUtilizador(@WebParam(name = "email") String email);
+
+@WebMethod
+int contarAnunciosPorLocal(@WebParam(name = "local") String local);
+
+@WebMethod
+int contarLocais();
+
+@WebMethod
+int contarInfraestruturasAtivas();
+
+@WebMethod
+int contarAnunciosAtivos();
+
+@WebMethod
+int contarAnunciosExpirados();
+
+@WebMethod
+String getEstatisticasCompletas();
+              
+          }
+
+

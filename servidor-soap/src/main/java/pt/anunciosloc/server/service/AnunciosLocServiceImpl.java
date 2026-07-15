@@ -1086,4 +1086,187 @@ public String cadastrarAdmin(String email, String password, String nome, String 
 }
 
 
+
+// ==================== CONTAGEM DE UTILIZADORES ====================
+
+@Override
+public int contarUtilizadores() {
+    try {
+        String sql = "SELECT COUNT(*) FROM utilizadores WHERE sessao_activa = 1";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar utilizadores: " + e.getMessage());
+        return 0;
+    }
+}
+
+// ==================== CONTAGEM DE ANUNCIOS ====================
+
+@Override
+public int contarAnuncios() {
+    try {
+        String sql = "SELECT COUNT(*) FROM anuncios";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar anuncios: " + e.getMessage());
+        return 0;
+    }
+}
+
+@Override
+public int contarAnunciosPorUtilizador(String email) {
+    try {
+        String sql = "SELECT COUNT(*) FROM anuncios a " +
+                     "JOIN utilizadores u ON a.utilizador_id = u.id " +
+                     "WHERE u.email = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, email);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar anuncios do utilizador: " + e.getMessage());
+        return 0;
+    }
+}
+
+@Override
+public int contarAnunciosPorLocal(String local) {
+    try {
+        String sql = "SELECT COUNT(*) FROM anuncios a " +
+                     "JOIN locais l ON a.local_id = l.id " +
+                     "WHERE l.nome = ?";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, local);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar anuncios do local: " + e.getMessage());
+        return 0;
+    }
+}
+
+@Override
+public int contarAnunciosAtivos() {
+    try {
+        String sql = "SELECT COUNT(*) FROM anuncios WHERE activo = 1 AND data_expiracao > NOW()";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar anuncios ativos: " + e.getMessage());
+        return 0;
+    }
+}
+
+@Override
+public int contarAnunciosExpirados() {
+    try {
+        String sql = "SELECT COUNT(*) FROM anuncios WHERE activo = 1 AND data_expiracao <= NOW()";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar anuncios expirados: " + e.getMessage());
+        return 0;
+    }
+}
+
+// ==================== CONTAGEM DE LOCAIS ====================
+
+@Override
+public int contarLocais() {
+    try {
+        String sql = "SELECT COUNT(*) FROM locais";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar locais: " + e.getMessage());
+        return 0;
+    }
+}
+
+@Override
+public int contarInfraestruturasAtivas() {
+    try {
+        String sql = "SELECT COUNT(*) FROM infraestruturas WHERE ativo = 1";
+        try (Connection conn = ConnectionFactory.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+            return 0;
+        }
+    } catch (SQLException e) {
+        System.err.println("Erro ao contar infraestruturas ativas: " + e.getMessage());
+        return 0;
+    }
+}
+
+// ==================== ESTATISTICAS COMPLETAS ====================
+
+@Override
+public String getEstatisticasCompletas() {
+    try {
+        int totalUtilizadores = contarUtilizadores();
+        int totalAnuncios = contarAnuncios();
+        int totalLocais = contarLocais();
+        int totalAnunciosAtivos = contarAnunciosAtivos();
+        int totalAnunciosExpirados = contarAnunciosExpirados();
+        int totalInfraestruturasAtivas = contarInfraestruturasAtivas();
+        
+        return "ESTATISTICAS DO SISTEMA\n" +
+               "================================\n" +
+               "Utilizadores ativos: " + totalUtilizadores + "\n" +
+               "Total de anuncios: " + totalAnuncios + "\n" +
+               "Anuncios ativos: " + totalAnunciosAtivos + "\n" +
+               "Anuncios expirados: " + totalAnunciosExpirados + "\n" +
+               "Locais cadastrados: " + totalLocais + "\n" +
+               "Infraestruturas ativas: " + totalInfraestruturasAtivas + "\n" +
+               "================================\n";
+    } catch (Exception e) {
+        return "Erro ao obter estatisticas: " + e.getMessage();
+    }
+}
+
 }

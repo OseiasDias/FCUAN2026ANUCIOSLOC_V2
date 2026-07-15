@@ -8,7 +8,7 @@ import {
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { loginAdmin } from '../../services/soapService';  
+import { loginAdmin } from '../../services/soapService';
 import './Login.css';
 
 const Login = ({ onLogin }) => {
@@ -52,7 +52,7 @@ const Login = ({ onLogin }) => {
 
   // ==================== HANDLERS ====================
 
- const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -69,11 +69,11 @@ const Login = ({ onLogin }) => {
 
       if (result.success) {
         toast.success('Login realizado com sucesso!');
-        
+
         // Guardar sessão
         localStorage.setItem('userEmail', email);
         localStorage.setItem('userLogged', 'true');
-        
+
         // Chamar callback do parent
         setTimeout(() => {
           onLogin(email);
@@ -103,7 +103,7 @@ const Login = ({ onLogin }) => {
   const handleSendResetCode = async (e) => {
     e.preventDefault();
     setResetError('');
-    
+
     if (!resetEmail) {
       setResetError('Digite seu email');
       return;
@@ -684,13 +684,14 @@ const Login = ({ onLogin }) => {
                   </Form>
 
                   <motion.div variants={itemVariants} className="login-footer">
-                    <p className="footer-text">
-                      <FaUserCircle className="footer-icon" />
-                      Credenciais de teste:
-                      <span className="credential"> admin@anunciosloc.com</span>
-                      <span className="credential-sep">/</span>
-                      <span className="credential">admin123</span>
-                    </p>
+                    <div className="footer-content">
+                      <div className="footer-text">
+                        <p className="footer-title">Acesso Administrativo</p>
+                        <p className="footer-subtitle">
+                          Para obter credenciais, contacte o suporte técnico
+                        </p>
+                      </div>
+                    </div>
                   </motion.div>
 
                   <motion.div

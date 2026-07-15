@@ -11,7 +11,10 @@ import {
   FaEye,
   FaShare,
   FaCalendarAlt,
-  FaClock
+  FaClock,
+  FaBuilding,
+  FaCheckCircle,
+  FaExclamationCircle
 } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import {
@@ -36,31 +39,21 @@ import toast from 'react-hot-toast';
 import './Dashboard.css';
 
 const Dashboard = () => {
-  const [estatisticas, setEstatisticas] = useState(null);
+  const [estatisticas, setEstatisticas] = useState({
+    totalUtilizadores: 0,
+    totalAnuncios: 0,
+    totalLocais: 0,
+    anunciosAtivos: 0,
+    anunciosExpirados: 0,
+    infraestruturasAtivas: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [ultimosAnuncios, setUltimosAnuncios] = useState([]);
   const [locais, setLocais] = useState([]);
 
-  // Dados para gráficos
-  const [dadosEvolucao, setDadosEvolucao] = useState([
-    { mes: 'Jan', anuncios: 12, utilizadores: 5 },
-    { mes: 'Fev', anuncios: 19, utilizadores: 8 },
-    { mes: 'Mar', anuncios: 15, utilizadores: 12 },
-    { mes: 'Abr', anuncios: 22, utilizadores: 18 },
-    { mes: 'Mai', anuncios: 28, utilizadores: 25 },
-    { mes: 'Jun', anuncios: 35, utilizadores: 32 },
-    { mes: 'Jul', anuncios: 42, utilizadores: 40 },
-    { mes: 'Ago', anuncios: 48, utilizadores: 50 },
-    { mes: 'Set', anuncios: 55, utilizadores: 60 },
-    { mes: 'Out', anuncios: 62, utilizadores: 75 },
-    { mes: 'Nov', anuncios: 70, utilizadores: 90 },
-    { mes: 'Dez', anuncios: 78, utilizadores: 110 },
-  ]);
-
   const [dadosStatus, setDadosStatus] = useState([
-    { name: 'Ativos', value: 65, color: '#6366F1' },
-    { name: 'Entregues', value: 25, color: '#22C55E' },
-    { name: 'Expirados', value: 10, color: '#EF4444' },
+    { name: 'Ativos', value: 0, color: '#6366F1' },
+    { name: 'Expirados', value: 0, color: '#EF4444' },
   ]);
 
   const [dadosLocais, setDadosLocais] = useState([]);
@@ -80,62 +73,88 @@ const Dashboard = () => {
     }
   }, [locais]);
 
-  const carregarDados = async () => {
-    setLoading(true);
-    try {
-      const stats = await soapClient.getEstatisticas();
-      setEstatisticas(stats);
-      
-      const anuncios = await soapClient.listarAnuncios();
-      setUltimosAnuncios(anuncios.slice(0, 5));
+ // ==================== CARREGAR DADOS ====================
 
-      const locaisData = await soapClient.listarLocais();
-      setLocais(locaisData);
-      
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-      toast.error('Erro ao carregar dados do servidor');
-    }
-    setLoading(false);
-  };
+const carregarDados = async () => {
+  setLoading(true);
+  try {
+    // 1. Carregar estatisticas
+    const stats = await soapClient.getEstatisticasCompletas();
+    setEstatisticas(stats);
+
+    // 2. Carregar anuncios
+    const anuncios = await soapClient.listarAnuncios();
+    console.log(' Anuncios recebidos:', anuncios);
+    
+    // CORREÇÃO: Os anuncios JÁ SÃO OBJETOS!
+    // Não precisa fazer parsing novamente
+    setUltimosAnuncios(anuncios.slice(0, 5));
+
+    // 3. Carregar locais
+    const locaisData = await soapClient.listarLocaisCoordenadas();
+    const locaisFormatados = locaisData.map((item) => {
+      if (typeof item === 'string' && item.includes('|')) {
+        const partes = item.split('|');
+        return {
+          nome: partes[0] || 'Local sem nome',
+          tipo: partes[1] || 'GPS',
+          latitude: parseFloat(partes[2]) || 0,
+          longitude: parseFloat(partes[3]) || 0,
+          raio: parseFloat(partes[4]) || 50,
+        };
+      }
+      return {
+        nome: item.nome || 'Local sem nome',
+        latitude: item.latitude || 0,
+        longitude: item.longitude || 0,
+        raio: item.raio || 50,
+      };
+    });
+    setLocais(locaisFormatados);
+
+  } catch (error) {
+    console.error(' Erro ao carregar dados:', error);
+    toast.error('Erro ao carregar dados do servidor');
+  }
+  setLoading(false);
+};
 
   const stats = [
     { 
       title: 'Utilizadores', 
-      value: estatisticas?.totalUtilizadores || 0, 
+      value: estatisticas.totalUtilizadores || 0, 
       icon: <FaUsers />, 
       color: '#6366F1',
       bg: 'rgba(99, 102, 241, 0.1)',
-      subtitle: `${estatisticas?.utilizadoresAtivos || 0} ativos`,
+      subtitle: 'Utilizadores ativos na plataforma',
     },
     { 
-      title: 'Anúncios', 
-      value: estatisticas?.totalAnuncios || 0, 
+      title: 'Anuncios', 
+      value: estatisticas.totalAnuncios || 0, 
       icon: <FaBullhorn />, 
       color: '#F59E0B',
       bg: 'rgba(245, 158, 11, 0.1)',
-      subtitle: `${estatisticas?.anunciosHoje || 0} hoje`,
+      subtitle: `${estatisticas.anunciosAtivos || 0} ativos, ${estatisticas.anunciosExpirados || 0} expirados`,
     },
     { 
       title: 'Locais', 
-      value: estatisticas?.totalLocais || 0, 
+      value: estatisticas.totalLocais || 0, 
       icon: <FaMapMarkerAlt />, 
       color: '#22C55E',
       bg: 'rgba(34, 197, 94, 0.1)',
-      subtitle: `${locais.length} cadastrados`,
+      subtitle: `${estatisticas.infraestruturasAtivas || 0} infraestruturas ativas`,
     },
     { 
-      title: 'Saldo Médio', 
-      value: `${estatisticas?.saldoMedio || 0} pts`, 
-      icon: <FaCoins />, 
-      color: '#EC4899',
-      bg: 'rgba(236, 72, 153, 0.1)',
-      subtitle: 'Pontos por utilizador',
+      title: 'Infraestruturas', 
+      value: estatisticas.infraestruturasAtivas || 0, 
+      icon: <FaBuilding />, 
+      color: '#8B5CF6',
+      bg: 'rgba(139, 92, 246, 0.1)',
+      subtitle: 'Servidores ativos',
     },
   ];
 
-  // Cores para o gráfico de status
-  const COLORS = ['#6366F1', '#22C55E', '#EF4444'];
+  const COLORS = ['#22C55E', '#EF4444'];
 
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
@@ -161,10 +180,11 @@ const Dashboard = () => {
   return (
     <div className="dashboard-container">
       <Container fluid>
-        {/* Título */}
+        {/* Titulo */}
         <div className="dashboard-header">
           <div>
-            <h2 className="dashboard-title">Visão geral da plataforma AnunciosLoc</h2>
+            <h2 className="dashboard-title">Visao geral da plataforma AnunciosLoc</h2>
+            <p className="dashboard-subtitle">Estatisticas e metricas do sistema em tempo real</p>
           </div>
           <div className="dashboard-header-actions">
             <button className="btn-refresh" onClick={carregarDados}>
@@ -200,23 +220,19 @@ const Dashboard = () => {
           ))}
         </Row>
 
-        {/* GRÁFICOS */}
+        {/* GRAFICOS */}
         <Row className="g-4">
-          {/* Gráfico de Área - Evolução */}
-          {/* Gráfico de Donut - Status */}
-
-
-          {/* Gráfico de Donut - Status */}
+          {/* Grafico de Donut - Status dos Anuncios */}
           <Col lg={6}>
             <Card className="chart-card">
               <Card.Header className="chart-card-header">
                 <div>
                   <h5 className="chart-card-title">
                     <FaClock className="chart-title-icon" />
-                    Status dos Anúncios
+                    Status dos Anuncios
                   </h5>
                   <p className="chart-card-subtitle">
-                    Distribuição atual dos anúncios na plataforma
+                    Distribuicao atual dos anuncios na plataforma
                   </p>
                 </div>
                 <Badge bg="success" className="chart-badge">
@@ -249,32 +265,30 @@ const Dashboard = () => {
                         border: '1px solid #eef0f3',
                         fontFamily: 'Poppins'
                       }}
-                      formatter={(value, name) => [`${value} anúncios`, name]}
+                      formatter={(value, name) => [`${value} anuncios`, name]}
                     />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={50}
-                      iconType="circle"
-                    />
+                    <Legend verticalAlign="bottom" height={50} iconType="circle" />
                   </PieChart>
                 </ResponsiveContainer>
               </Card.Body>
             </Card>
           </Col>
+
+          {/* Ultimos Anuncios */}
           <Col lg={6}>
             <Card className="anuncios-card">
               <Card.Header className="anuncios-card-header">
                 <div>
                   <h5 className="anuncios-card-title">
                     <FaBullhorn className="anuncios-title-icon" />
-                    Últimos Anúncios
+                    Ultimos Anuncios
                   </h5>
                   <p className="anuncios-card-subtitle">
                     Atividade recente na plataforma
                   </p>
                 </div>
                 <Badge bg="warning" className="anuncios-badge">
-                  {ultimosAnuncios.length} novos
+                  {ultimosAnuncios.length} anuncios
                 </Badge>
               </Card.Header>
               <Card.Body className="anuncios-card-body">
@@ -282,7 +296,7 @@ const Dashboard = () => {
                   {ultimosAnuncios.length === 0 ? (
                     <div className="empty-anuncios">
                       <FaBullhorn className="empty-icon" />
-                      <p>Nenhum anúncio publicado ainda</p>
+                      <p>Nenhum anuncio publicado ainda</p>
                       <small>Seja o primeiro a publicar!</small>
                     </div>
                   ) : (
@@ -314,19 +328,19 @@ const Dashboard = () => {
           </Col>
         </Row>
 
-        {/* Segundo Row de Gráficos */}
+        {/* Segundo Row de Graficos */}
         <Row className="g-4 mt-2">
-          {/* Gráfico de Barras - Anúncios por Local */}
+          {/* Grafico de Barras - Anuncios por Local */}
           <Col lg={7}>
             <Card className="chart-card">
               <Card.Header className="chart-card-header">
                 <div>
                   <h5 className="chart-card-title">
                     <FaLocationArrow className="chart-title-icon" />
-                    Anúncios por Local
+                    Anuncios por Local
                   </h5>
                   <p className="chart-card-subtitle">
-                    Distribuição de anúncios por infraestrutura
+                    Distribuicao de anuncios por infraestrutura
                   </p>
                 </div>
                 <Badge bg="warning" className="chart-badge">
@@ -346,9 +360,9 @@ const Dashboard = () => {
                         border: '1px solid #eef0f3',
                         fontFamily: 'Poppins'
                       }}
-                      formatter={(value) => [`${value} anúncios`, 'Quantidade']}
+                      formatter={(value) => [`${value} anuncios`, 'Quantidade']}
                     />
-                    <Bar dataKey="anuncios" name="Anúncios" radius={[8, 8, 0, 0]} barSize={40}>
+                    <Bar dataKey="anuncios" name="Anuncios" radius={[8, 8, 0, 0]} barSize={40}>
                       {dadosLocais.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.cor || '#6366F1'} />
                       ))}
@@ -359,7 +373,8 @@ const Dashboard = () => {
             </Card>
           </Col>
 
-          <Col xs={5}>
+          {/* Locais Cadastrados */}
+          <Col lg={5}>
             <Card className="locais-card">
               <Card.Header className="locais-card-header">
                 <div>
@@ -368,7 +383,7 @@ const Dashboard = () => {
                     Locais Cadastrados
                   </h5>
                   <p className="locais-card-subtitle">
-                    Todas as infraestruturas disponíveis na plataforma
+                    Todas as infraestruturas disponiveis na plataforma
                   </p>
                 </div>
                 <span className="locais-count">{locais.length} locais</span>
@@ -379,19 +394,19 @@ const Dashboard = () => {
                     <div className="empty-locais">
                       <FaMapMarkerAlt className="empty-icon" />
                       <p>Nenhum local cadastrado</p>
-                      <small>Cadastre locais para começar</small>
+                      <small>Cadastre locais para comecar</small>
                     </div>
                   ) : (
-                    locais.map((local) => (
-                      <div key={local.id} className="local-item">
+                    locais.map((local, index) => (
+                      <div key={index} className="local-item">
                         <div className="local-icon-wrapper">
                           <FaMapMarkerAlt className="local-item-icon" />
                         </div>
                         <div className="local-info">
                           <h6 className="local-name">{local.nome || 'Local sem nome'}</h6>
                           <p className="local-coords">
-                            {local.latitude?.toFixed(4) || 'N/A'}, 
-                            {local.longitude?.toFixed(4) || 'N/A'}
+                            Lat: {local.latitude?.toFixed(4) || 'N/A'}, 
+                            Lon: {local.longitude?.toFixed(4) || 'N/A'}
                           </p>
                           {local.capacidade && (
                             <Badge bg="secondary" className="local-capacity">
@@ -406,11 +421,7 @@ const Dashboard = () => {
               </Card.Body>
             </Card>
           </Col>
-          
         </Row>
-
-      
-      
       </Container>
     </div>
   );
