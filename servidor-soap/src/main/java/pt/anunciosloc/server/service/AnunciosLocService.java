@@ -222,7 +222,12 @@ int contarAnunciosExpirados();
 
 @WebMethod
 String getEstatisticasCompletas();
+
+@WebMethod
+String eliminarAnuncio(@WebParam(name = "id") String id);
               
-          }
+         
+
+}
 
 

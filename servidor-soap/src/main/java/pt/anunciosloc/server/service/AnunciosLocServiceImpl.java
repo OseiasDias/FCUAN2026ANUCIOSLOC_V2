@@ -1269,4 +1269,35 @@ public String getEstatisticasCompletas() {
     }
 }
 
+@Override
+public String eliminarAnuncio(String id) {
+    try {
+        System.out.println(" Tentando eliminar anúncio ID: " + id);
+        
+        // Verificar se o anúncio existe
+        Anuncio anuncio = anuncioRepo.buscarPorId(id);
+        if (anuncio == null) {
+            return "ERRO: Anúncio não encontrado com ID: " + id;
+        }
+        
+        // Verificar se o anúncio está ativo (opcional)
+        if (!anuncio.isActivo()) {
+            return "ERRO: Anúncio já está inativo ou foi removido: " + id;
+        }
+        
+        // Remover o anúncio
+        anuncioRepo.eliminar(id);
+        
+        System.out.println(" Anúncio eliminado com sucesso: " + id);
+        return "Anúncio eliminado com sucesso! ID: " + id;
+        
+    } catch (SQLException e) {
+        System.err.println(" Erro ao eliminar anúncio: " + e.getMessage());
+        return "ERRO: " + e.getMessage();
+    } catch (Exception e) {
+        System.err.println(" Erro inesperado: " + e.getMessage());
+        return "ERRO: " + e.getMessage();
+    }
+}
+ 
 }

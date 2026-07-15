@@ -6,7 +6,7 @@ import {
 import { 
   FaTrash, FaPlus, FaEdit, FaMapMarkerAlt, FaSearch,
   FaTimes, FaUsers, FaBuilding, FaGlobe, FaInfoCircle,
-  FaCheckCircle, FaClock, FaCity
+  FaCheckCircle, FaClock, FaCity, FaPowerOff, FaPlay
 } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import { soapClient } from '../../api/soapClient';
@@ -37,22 +37,53 @@ const Locais = () => {
     setLoading(true);
     try {
       const data = await soapClient.listarLocais();
-      setLocais(data);
+      console.log('📦 Locais recebidos:', data);
+      setLocais(Array.isArray(data) ? data : []);
     } catch (error) {
+      console.error('❌ Erro ao carregar locais:', error);
       toast.error('Erro ao carregar locais');
+      setLocais([]);
     }
     setLoading(false);
   };
 
   const handleEliminar = async (nome) => {
-    if (!window.confirm(`Deseja eliminar o local ${nome} permanentemente?`)) return;
+    if (!nome) {
+      toast.error('Nome do local não fornecido');
+      return;
+    }
+    
+    if (!window.confirm(`Deseja eliminar o local "${nome}" permanentemente?`)) return;
     
     try {
-      await soapClient.eliminarLocal(nome);
-      toast.success('Local eliminado com sucesso');
+      const result = await soapClient.eliminarLocal(nome);
+      toast.success(result || 'Local eliminado com sucesso');
       carregarLocais();
     } catch (error) {
-      toast.error('Erro ao eliminar local');
+      console.error(' Erro ao eliminar local:', error);
+      toast.error(error.message || 'Erro ao eliminar local');
+    }
+  };
+
+  const handleAtivar = async (nome) => {
+    try {
+      const result = await soapClient.ativarInfraestrutura(nome);
+      toast.success(result || 'Local ativado com sucesso');
+      carregarLocais();
+    } catch (error) {
+      console.error('❌ Erro ao ativar local:', error);
+      toast.error('Erro ao ativar local');
+    }
+  };
+
+  const handleDesativar = async (nome) => {
+    try {
+      const result = await soapClient.desativarInfraestrutura(nome);
+      toast.success(result || 'Local desativado com sucesso');
+      carregarLocais();
+    } catch (error) {
+      console.error('❌ Erro ao desativar local:', error);
+      toast.error('Erro ao desativar local');
     }
   };
 
@@ -64,10 +95,14 @@ const Locais = () => {
     if (!novoLocal.latitude) errors.latitude = 'Latitude é obrigatória';
     if (!novoLocal.longitude) errors.longitude = 'Longitude é obrigatória';
     if (!novoLocal.capacidade) errors.capacidade = 'Capacidade é obrigatória';
-    if (parseFloat(novoLocal.latitude) < -90 || parseFloat(novoLocal.latitude) > 90) {
+    
+    const lat = parseFloat(novoLocal.latitude);
+    const lon = parseFloat(novoLocal.longitude);
+    
+    if (isNaN(lat) || lat < -90 || lat > 90) {
       errors.latitude = 'Latitude deve estar entre -90 e 90';
     }
-    if (parseFloat(novoLocal.longitude) < -180 || parseFloat(novoLocal.longitude) > 180) {
+    if (isNaN(lon) || lon < -180 || lon > 180) {
       errors.longitude = 'Longitude deve estar entre -180 e 180';
     }
 
@@ -77,20 +112,23 @@ const Locais = () => {
     }
 
     try {
-      await soapClient.criarLocal({
+      const result = await soapClient.criarLocal({
         nome: novoLocal.nome,
-        latitude: parseFloat(novoLocal.latitude),
-        longitude: parseFloat(novoLocal.longitude),
+        localizacao: novoLocal.nome,
+        latitude: lat,
+        longitude: lon,
         capacidade: parseInt(novoLocal.capacidade),
-        tipo: novoLocal.tipo || 'GPS',
+        criadorEmail: localStorage.getItem('adminEmail') || 'admin@anunciosloc.com'
       });
-      toast.success('Local criado com sucesso');
+      
+      toast.success(result || 'Local criado com sucesso');
       setShowModal(false);
       setNovoLocal({ nome: '', latitude: '', longitude: '', capacidade: '', tipo: 'GPS' });
       setFormErrors({});
       carregarLocais();
     } catch (error) {
-      toast.error('Erro ao criar local');
+      console.error(' Erro ao criar local:', error);
+      toast.error(error.message || 'Erro ao criar local');
     }
   };
 
@@ -109,7 +147,7 @@ const Locais = () => {
   const handleAtualizarLocal = async (e) => {
     e.preventDefault();
     try {
-      // Chamar API para atualizar local
+      // Atualizar local via SOAP (se houver método)
       toast.success('Local atualizado com sucesso');
       setShowEditModal(false);
       setSelectedLocal(null);
@@ -167,9 +205,7 @@ const Locais = () => {
         <Row className="g-3 mb-4">
           <Col xs={6} md={3}>
             <div className="stat-card total">
-              <div className="stat-icon">
-                <FaCity />
-              </div>
+              <div className="stat-icon"><FaCity /></div>
               <div className="stat-info">
                 <span className="stat-value">{stats.total}</span>
                 <span className="stat-label">Total Locais</span>
@@ -178,9 +214,7 @@ const Locais = () => {
           </Col>
           <Col xs={6} md={3}>
             <div className="stat-card ativos">
-              <div className="stat-icon">
-                <FaCheckCircle />
-              </div>
+              <div className="stat-icon"><FaCheckCircle /></div>
               <div className="stat-info">
                 <span className="stat-value">{stats.ativos}</span>
                 <span className="stat-label">Ativos</span>
@@ -189,9 +223,7 @@ const Locais = () => {
           </Col>
           <Col xs={6} md={3}>
             <div className="stat-card capacidade">
-              <div className="stat-icon">
-                <FaUsers />
-              </div>
+              <div className="stat-icon"><FaUsers /></div>
               <div className="stat-info">
                 <span className="stat-value">{stats.capacidadeTotal}</span>
                 <span className="stat-label">Capacidade Total</span>
@@ -200,9 +232,7 @@ const Locais = () => {
           </Col>
           <Col xs={6} md={3}>
             <div className="stat-card tipos">
-              <div className="stat-icon">
-                <FaGlobe />
-              </div>
+              <div className="stat-icon"><FaGlobe /></div>
               <div className="stat-info">
                 <span className="stat-value">{stats.tipos}</span>
                 <span className="stat-label">Tipos de Local</span>
@@ -241,7 +271,7 @@ const Locais = () => {
         <Row className="g-4">
           <AnimatePresence>
             {filteredLocais.map((local, index) => (
-              <Col key={local.id} xs={12} md={6} lg={4} xl={3}>
+              <Col key={local.id || index} xs={12} md={6} lg={4} xl={3}>
                 <motion.div
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -290,14 +320,28 @@ const Locais = () => {
                         )}
                       </div>
 
-                      {local.criador && (
+                      {local.criadorEmail && (
                         <div className="local-criador">
                           <FaBuilding className="criador-icon" />
-                          <span>Criado por: {local.criador}</span>
+                          <span>Criado por: {local.criadorEmail}</span>
                         </div>
                       )}
 
                       <div className="local-actions">
+                        <OverlayTrigger
+                          placement="top"
+                          overlay={<Tooltip>Ativar/Desativar</Tooltip>}
+                        >
+                          <Button
+                            variant={local.ativo !== false ? 'outline-warning' : 'outline-success'}
+                            size="sm"
+                            className="action-btn toggle-btn"
+                            onClick={() => local.ativo !== false ? handleDesativar(local.nome) : handleAtivar(local.nome)}
+                          >
+                            {local.ativo !== false ? <FaPowerOff /> : <FaPlay />}
+                          </Button>
+                        </OverlayTrigger>
+
                         <OverlayTrigger
                           placement="top"
                           overlay={<Tooltip>Editar local</Tooltip>}
@@ -495,13 +539,9 @@ const Locais = () => {
         <Form onSubmit={handleAtualizarLocal}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>
-                <FaMapMarkerAlt className="label-icon" />
-                Nome
-              </Form.Label>
+              <Form.Label>Nome</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Nome do local"
                 value={novoLocal.nome}
                 onChange={(e) => setNovoLocal({...novoLocal, nome: e.target.value})}
                 required

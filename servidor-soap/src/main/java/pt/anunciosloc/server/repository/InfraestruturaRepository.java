@@ -49,66 +49,68 @@ public class InfraestruturaRepository {
     // ==================== BUSCAR ====================
 
     public Infraestrutura buscarPorNome(String nome) throws SQLException {
-    // ✅ INCLUIR O RAIO NO SELECT!
-    String sql = "SELECT l.id, l.nome, l.latitude, l.longitude, l.raio, " +
-                 "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
-                 "FROM locais l " +
-                 "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id " +
-                 "WHERE LOWER(TRIM(l.nome)) = LOWER(TRIM(?))";
-    
-    try (Connection conn = ConnectionFactory.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-        
-        stmt.setString(1, nome);
-        ResultSet rs = stmt.executeQuery();
-        
-        if (rs.next()) {
-            Infraestrutura infra = new Infraestrutura();
-            infra.setId(rs.getLong("id"));
-            infra.setNome(rs.getString("nome"));
-            infra.setLatitude(rs.getDouble("latitude"));
-            infra.setLongitude(rs.getDouble("longitude"));
-            infra.setRaio(rs.getDouble("raio"));  // ← ADICIONAR!
-            infra.setCapacidade(rs.getInt("capacidade"));
-            infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
-            infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
-            infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
-            infra.setAtivo(true);
-            return infra;
+        // ✅ INCLUIR O RAIO NO SELECT!
+        String sql = "SELECT l.id, l.nome, l.latitude, l.longitude, l.raio, " +
+                "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
+                "FROM locais l " +
+                "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id " +
+                "WHERE LOWER(TRIM(l.nome)) = LOWER(TRIM(?))";
+
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, nome);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                Infraestrutura infra = new Infraestrutura();
+                infra.setId(rs.getLong("id"));
+                infra.setNome(rs.getString("nome"));
+                infra.setLatitude(rs.getDouble("latitude"));
+                infra.setLongitude(rs.getDouble("longitude"));
+                infra.setRaio(rs.getDouble("raio")); // ← ADICIONAR!
+                infra.setCapacidade(rs.getInt("capacidade"));
+                infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
+                infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
+                infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
+                infra.setAtivo(true);
+                return infra;
+            }
         }
+        return null;
     }
-    return null;
-}
+
     public List<Infraestrutura> listarTodas() throws SQLException {
-    //  INCLUIR O RAIO NO SELECT!
-    String sql = "SELECT l.id, l.nome, l.latitude, l.longitude, l.raio, " +
-                 "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
-                 "FROM locais l " +
-                 "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id";
-    
-    List<Infraestrutura> lista = new ArrayList<>();
-    
-    try (Connection conn = ConnectionFactory.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql);
-         ResultSet rs = stmt.executeQuery()) {
-        
-        while (rs.next()) {
-            Infraestrutura infra = new Infraestrutura();
-            infra.setId(rs.getLong("id"));
-            infra.setNome(rs.getString("nome"));
-            infra.setLatitude(rs.getDouble("latitude"));
-            infra.setLongitude(rs.getDouble("longitude"));
-            infra.setRaio(rs.getDouble("raio"));  // ← ADICIONAR!
-            infra.setCapacidade(rs.getInt("capacidade"));
-            infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
-            infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
-            infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
-            infra.setAtivo(true);
-            lista.add(infra);
+        // INCLUIR O RAIO NO SELECT!
+        String sql = "SELECT l.id, l.nome, l.latitude, l.longitude, l.raio, " +
+                "i.capacidade, i.conexoes_actuais, i.anuncios_entregues, i.anuncios_publicados " +
+                "FROM locais l " +
+                "LEFT JOIN infraestruturas i ON l.infraestrutura_id = i.id";
+
+        List<Infraestrutura> lista = new ArrayList<>();
+
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Infraestrutura infra = new Infraestrutura();
+                infra.setId(rs.getLong("id"));
+                infra.setNome(rs.getString("nome"));
+                infra.setLatitude(rs.getDouble("latitude"));
+                infra.setLongitude(rs.getDouble("longitude"));
+                infra.setRaio(rs.getDouble("raio")); // ← ADICIONAR!
+                infra.setCapacidade(rs.getInt("capacidade"));
+                infra.setUtilizadoresConectados(rs.getInt("conexoes_actuais"));
+                infra.setTotalEntregas(rs.getInt("anuncios_entregues"));
+                infra.setTotalAnuncios(rs.getInt("anuncios_publicados"));
+                infra.setAtivo(true);
+                lista.add(infra);
+            }
         }
+        return lista;
     }
-    return lista;
-}
+
     public Infraestrutura buscarPorId(Long id) throws SQLException {
         String sql = "SELECT i.*, l.latitude, l.longitude FROM infraestruturas i " +
                 "JOIN locais l ON i.id = l.infraestrutura_id " +
@@ -189,25 +191,34 @@ public class InfraestruturaRepository {
     }
 
     // ==================== ELIMINAR ====================
-
-    public void eliminar(String nome) throws SQLException {
-        // Primeiro eliminar os locais associados
-        String sqlLocal = "DELETE FROM locais WHERE infraestrutura_id = (SELECT id FROM infraestruturas WHERE nome = ?)";
+    public void eliminar(String id) throws SQLException {
+        // Primeiro eliminar as restrições associadas
+        String sqlRestricoes = "DELETE FROM restricoes WHERE anuncio_id = (SELECT id FROM anuncios WHERE id = ?)";
         try (Connection conn = ConnectionFactory.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sqlLocal)) {
-            stmt.setString(1, nome);
+                PreparedStatement stmt = conn.prepareStatement(sqlRestricoes)) {
+            stmt.setString(1, id);
             stmt.executeUpdate();
         }
 
-        // Depois eliminar a infraestrutura
-        String sql = "DELETE FROM infraestruturas WHERE nome = ?";
+        // Depois eliminar visualizações associadas
+        String sqlVisualizacoes = "DELETE FROM visualizacoes_anuncio WHERE anuncio_id = (SELECT id FROM anuncios WHERE id = ?)";
+        try (Connection conn = ConnectionFactory.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sqlVisualizacoes)) {
+            stmt.setString(1, id);
+            stmt.executeUpdate();
+        }
+
+        // Finalmente eliminar o anúncio
+        String sql = "DELETE FROM anuncios WHERE id = ?";
         try (Connection conn = ConnectionFactory.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, nome);
-            stmt.executeUpdate();
+            stmt.setString(1, id);
+            int affected = stmt.executeUpdate();
+            if (affected == 0) {
+                throw new SQLException("Anúncio não encontrado: " + id);
+            }
         }
     }
-
     // ==================== VERIFICAR ====================
 
     public boolean existe(String nome) throws SQLException {
