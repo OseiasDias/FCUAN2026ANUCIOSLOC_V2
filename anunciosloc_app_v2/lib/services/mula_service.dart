@@ -15,7 +15,11 @@ class MulaService {
       entregas = List<Map<String, dynamic>>.from(json.decode(cached));
     }
 
-    entregas.add(entrega.toMap());
+    final existe = entregas.any((e) => e['id'] == entrega.id);
+
+    if (!existe) {
+      entregas.add(entrega.toMap());
+    }
     await prefs.setString(_cacheKey, json.encode(entregas));
   }
 
@@ -57,5 +61,9 @@ class MulaService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_cacheKey);
     await prefs.remove(_qrKey);
+  }
+
+  static Future<List<EntregaModel>> obterPendentes() async {
+    return await recuperarEntregasOffline();
   }
 }

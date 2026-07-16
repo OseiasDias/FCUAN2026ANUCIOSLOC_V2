@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/wifi_direct_service.dart';
 import '../models/anuncio_p2p.dart';
+import '../services/p2p_server_service.dart';
 
 class WifiDirectScreen extends StatefulWidget {
   const WifiDirectScreen({super.key});
@@ -21,12 +22,10 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
   @override
   void initState() {
     super.initState();
-    _inicializar();
 
     _wifiService.onDevicesDiscovered = (devices) {
       setState(() {
         _dispositivos = devices;
-        _carregando = false;
       });
     };
 
@@ -41,6 +40,22 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
         _status = status;
       });
     };
+
+    _iniciar();
+  }
+
+  Future<void> _iniciar() async {
+    setState(() {
+      _carregando = true;
+    });
+
+    await _wifiService.init();
+
+    await _wifiService.discoverDevices();
+
+    setState(() {
+      _carregando = false;
+    });
   }
 
   Future<void> _inicializar() async {
@@ -107,7 +122,17 @@ class _WifiDirectScreenState extends State<WifiDirectScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              _wifiService.armazenarAnuncioMula(anuncio);
+              _wifiService.onAnunciosRecebidos = (anuncios) {
+                for (var anuncio in anuncios) {
+                  if (_modoMula) {
+                    _wifiService.armazenarAnuncioMula(anuncio);
+                  }
+                }
+
+                setState(() {
+                  _anuncios = anuncios;
+                });
+              };
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,

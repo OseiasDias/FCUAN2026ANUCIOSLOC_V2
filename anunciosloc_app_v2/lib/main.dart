@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'services/notification_service.dart';
+import 'services/p2p_server_service.dart';
 import 'screens/splash_screen.dart';
+
+final P2PServerService p2pServer = P2PServerService();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializar notificações
   await NotificationService().init();
+
+  // Inicializar servidor P2P
+  await p2pServer.iniciarServidor();
 
   runApp(const MyApp());
 }

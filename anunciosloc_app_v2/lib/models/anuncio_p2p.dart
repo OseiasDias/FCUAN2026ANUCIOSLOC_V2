@@ -1,4 +1,6 @@
 class AnuncioP2P {
+  static const int maxSaltos = 3;
+
   final String id;
   final String titulo;
   final String descricao;
@@ -19,6 +21,10 @@ class AnuncioP2P {
     this.saltos = 0,
   });
 
+  bool podeSerRetransmitido() {
+    return saltos < maxSaltos;
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'titulo': titulo,
@@ -30,14 +36,16 @@ class AnuncioP2P {
         'saltos': saltos,
       };
 
-  factory AnuncioP2P.fromJson(Map<String, dynamic> json) => AnuncioP2P(
-        id: json['id'],
-        titulo: json['titulo'],
-        descricao: json['descricao'],
-        autor: json['autor'],
-        local: json['local'],
-        dataCriacao: DateTime.parse(json['dataCriacao']),
-        dispositivoOrigem: json['dispositivoOrigem'],
-        saltos: json['saltos'] ?? 0,
-      );
+  factory AnuncioP2P.fromJson(Map<String, dynamic> json) {
+    return AnuncioP2P(
+      id: json['id'],
+      titulo: json['titulo'],
+      descricao: json['descricao'],
+      autor: json['autor'],
+      local: json['local'],
+      dataCriacao: DateTime.parse(json['dataCriacao']),
+      dispositivoOrigem: json['dispositivoOrigem'],
+      saltos: json['saltos'] ?? 0,
+    );
+  }
 }
