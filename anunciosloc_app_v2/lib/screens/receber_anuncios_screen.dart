@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 import '../utils/preferencias.dart';
 import '../utils/constantes.dart';
+import '../services/notification_service.dart';
 
 class ReceberAnunciosScreen extends StatefulWidget {
   const ReceberAnunciosScreen({super.key});
@@ -248,39 +249,18 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
               'Nenhum anuncio encontrado em "$local".\nSeja o primeiro a publicar algo aqui!';
         });
       } else {
+        // ✅ MOSTRAR NOTIFICAÇÃO
+        await _mostrarNotificacaoAnuncios(mensagens, local);
+
         setState(() {
           _carregando = false;
-          _anuncios = mensagens.map((msg) {
-            // ✅ REMOVER OS PIPES E FORMATAR
-            String conteudoFormatado = msg;
-
-            // Substituir | por quebra de linha
-            conteudoFormatado = conteudoFormatado.replaceAll('|', '\n');
-
-            // Remover tags XML se existirem
-            conteudoFormatado =
-                conteudoFormatado.replaceAll(RegExp(r'<[^>]*>'), '');
-
-            // Substituir \n literal por quebra real
-            conteudoFormatado = conteudoFormatado.replaceAll('\\n', '\n');
-
-            // Remover espaços extras no início/fim
-            conteudoFormatado = conteudoFormatado.trim();
-
-            // Extrair autor se existir no formato "nome|email"
-            String autor = _extrairAutor(msg);
-            String data = _extrairData(msg);
-
-            return {
-              'conteudo': conteudoFormatado,
-              'lido': false,
-              'data': data.isNotEmpty
-                  ? DateTime.tryParse(data) ?? DateTime.now()
-                  : DateTime.now(),
-              'autor': autor.isNotEmpty ? autor : 'Utilizador',
-              'local': local,
-            };
-          }).toList();
+          _anuncios = mensagens
+              .map((msg) => ({
+                    'conteudo': msg,
+                    'lido': false,
+                    'data': DateTime.now(),
+                  }))
+              .toList();
         });
       }
     } catch (e) {
@@ -293,7 +273,57 @@ class _ReceberAnunciosScreenState extends State<ReceberAnunciosScreen> {
     }
   }
 
-// ✅ EXTRAIR AUTOR DA MENSAGEM
+// ✅ MÉTODO PARA MOSTRAR NOTIFICAÇÃO
+  Future<void> _mostrarNotificacaoAnuncios(
+      List<String> mensagens, String local) async {
+    try {
+      final notificationService = NotificationService();
+
+      // Extrair títulos dos anúncios
+      final titulos = mensagens.take(5).map((msg) {
+        // Tentar extrair título da mensagem
+        final match = RegExp(r'\] (.*?):').firstMatch(msg);
+        return match?.group(1) ?? 'Novo anúncio';
+      }).toList();
+
+      if (mensagens.length == 1) {
+        // Notificação para um único anúncio
+        final titulo = titulos.isNotEmpty ? titulos[0] : 'Novo anúncio';
+        await notificationService.showAnuncioNotification(
+          titulo: '📢 $titulo',
+          descricao: mensagens[0].length > 100
+              ? '${mensagens[0].substring(0, 100)}...'
+              : mensagens[0],
+          local: local,
+          payload: 'anuncio_$local',
+        );
+      } else {
+        // Notificação para múltiplos anúncios
+        await notificationService.showMultiplosAnunciosNotification(
+          local: local,
+          quantidade: mensagens.length,
+          titulos: titulos,
+        );
+      }
+
+      // Mostrar também um SnackBar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '🔔 ${mensagens.length} anúncios encontrados em $local!',
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      print('Erro ao mostrar notificação: $e');
+    }
+  }
+
+//  EXTRAIR AUTOR DA MENSAGEM
   String _extrairAutor(String mensagem) {
     // Tentar extrair email do formato "nome|email|..."
     final regex = RegExp(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})');

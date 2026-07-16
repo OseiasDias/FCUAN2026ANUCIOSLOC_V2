@@ -1,20 +1,29 @@
 import 'package:flutter/material.dart';
-import 'theme/tema_app.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
-  runApp(const AnunciosLocApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar notificações
+  await NotificationService().init();
+
+  runApp(const MyApp());
 }
 
-class AnunciosLocApp extends StatelessWidget {
-  const AnunciosLocApp({super.key});
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AnunciosLoc',
       debugShowCheckedModeBanner: false,
-      theme: TemaApp.temaClaro,
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        useMaterial3: true,
+      ),
       home: const SplashScreen(),
     );
   }

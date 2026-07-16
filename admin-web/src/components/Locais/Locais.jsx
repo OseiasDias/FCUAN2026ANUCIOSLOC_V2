@@ -193,7 +193,7 @@ const Locais = () => {
             </p>
           </div>
           <Button 
-            className="btn-new-local"
+            className="btn-new-local d-none"
             onClick={() => setShowModal(true)}
           >
             <FaPlus className="me-2" />
