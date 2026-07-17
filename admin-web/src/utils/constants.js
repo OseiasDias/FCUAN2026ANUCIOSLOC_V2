@@ -1,5 +1,5 @@
 // URL do servidor SOAP
-export const SOAP_API_URL = 'http://192.168.8.190:8082/ws/anunciosloc';
+export const SOAP_API_URL = 'http://192.168.0.150:8082/ws/anunciosloc';
 
 // Namespace SOAP
 export const NAMESPACE = 'http://service.server.anunciosloc.pt/';
