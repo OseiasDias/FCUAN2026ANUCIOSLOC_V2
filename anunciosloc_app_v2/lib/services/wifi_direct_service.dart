@@ -233,4 +233,34 @@ class WifiDirectService {
     _cacheMula = [];
     onStatusChanged?.call('Dados limpos');
   }
+
+  static Future<bool> enviarAnuncio(AnuncioP2P anuncio) async {
+    try {
+      final json = anuncio.toJson();
+
+// aqui vai entrar o socket WiFi Direct
+
+      print("Enviando anúncio:");
+
+      print(json);
+
+      return true;
+    } catch (e) {
+      print(e);
+
+      return false;
+    }
+  }
+
+  static Future<AnuncioP2P?> receberAnuncio() async {
+    try {
+// dados recebidos da rede
+
+      Map<String, dynamic> dados = {};
+
+      return AnuncioP2P.fromJson(dados);
+    } catch (e) {
+      return null;
+    }
+  }
 }

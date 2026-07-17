@@ -307,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // No main.dart ou no menu principal, adiciona:
                       ListTile(
                         leading: Icon(Icons.swap_horiz, color: Colors.orange),
-                        title: Text('Testar MULA'),
+                        title: Text('MULA'),
                         onTap: () {
                           Navigator.push(
                             context,

@@ -61,4 +61,15 @@ class Preferencias {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }
+
+  static Future<void> salvarEstadoMula(bool ativo) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('mula_ativa', ativo);
+  }
+
+  static Future<bool> getEstadoMula() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    return prefs.getBool('mula_ativa') ?? false;
+  }
 }

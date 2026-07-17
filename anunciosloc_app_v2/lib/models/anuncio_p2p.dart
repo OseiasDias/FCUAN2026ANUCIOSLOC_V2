@@ -1,6 +1,4 @@
 class AnuncioP2P {
-  static const int maxSaltos = 3;
-
   final String id;
   final String titulo;
   final String descricao;
@@ -18,34 +16,44 @@ class AnuncioP2P {
     required this.local,
     required this.dataCriacao,
     required this.dispositivoOrigem,
-    this.saltos = 0,
+    required this.saltos,
   });
 
-  bool podeSerRetransmitido() {
-    return saltos < maxSaltos;
+  // PARA SQLITE
+
+  Map<String, dynamic> toMap() {
+    return {
+      "id": id,
+      "titulo": titulo,
+      "descricao": descricao,
+      "autor": autor,
+      "local": local,
+      "dataCriacao": dataCriacao.toIso8601String(),
+      "dispositivoOrigem": dispositivoOrigem,
+      "saltos": saltos
+    };
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'titulo': titulo,
-        'descricao': descricao,
-        'autor': autor,
-        'local': local,
-        'dataCriacao': dataCriacao.toIso8601String(),
-        'dispositivoOrigem': dispositivoOrigem,
-        'saltos': saltos,
-      };
+  factory AnuncioP2P.fromMap(Map<String, dynamic> map) {
+    return AnuncioP2P(
+      id: map["id"],
+      titulo: map["titulo"],
+      descricao: map["descricao"],
+      autor: map["autor"],
+      local: map["local"],
+      dataCriacao: DateTime.parse(map["dataCriacao"]),
+      dispositivoOrigem: map["dispositivoOrigem"],
+      saltos: map["saltos"] ?? 0,
+    );
+  }
+
+  // PARA WIFI DIRECT
+
+  Map<String, dynamic> toJson() {
+    return toMap();
+  }
 
   factory AnuncioP2P.fromJson(Map<String, dynamic> json) {
-    return AnuncioP2P(
-      id: json['id'],
-      titulo: json['titulo'],
-      descricao: json['descricao'],
-      autor: json['autor'],
-      local: json['local'],
-      dataCriacao: DateTime.parse(json['dataCriacao']),
-      dispositivoOrigem: json['dispositivoOrigem'],
-      saltos: json['saltos'] ?? 0,
-    );
+    return AnuncioP2P.fromMap(json);
   }
 }
