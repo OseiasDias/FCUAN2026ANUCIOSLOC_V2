@@ -181,3 +181,14 @@ SELECT * FROM locais;
 
 SELECT '========== TABELAS CRIADAS ==========' AS '';
 SHOW TABLES;
+
+
+-- Inserir admin com SHA-256
+INSERT INTO administradores (email, nome, password_hash, role, ativo)
+VALUES (
+    'admin@anunciosloc.com',
+    'Administrador',
+    SHA2('admin123', 256),  -- ← Hash SHA-256
+    'SUPER_ADMIN',
+    1
+);

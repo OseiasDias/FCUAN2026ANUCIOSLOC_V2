@@ -32,7 +32,11 @@ class _TesteMulaScreenState extends State<TesteMulaScreen> {
   void initState() {
     super.initState();
 
-    _restaurarEstado();
+    // Inicia o servidor Socket
+    WifiDirectService().iniciarServidor();
+
+    // Carrega GPS, cache e anúncios
+    _iniciarMula();
   }
 
   Future<void> _restaurarEstado() async {
@@ -332,7 +336,7 @@ class _TesteMulaScreenState extends State<TesteMulaScreen> {
 
     if (!_mulaAtiva) {
       setState(() {
-        _log = '⚠️ Ative a MULA primeiro!';
+        _log = ' Ative a MULA primeiro!';
       });
       return;
     }
@@ -363,27 +367,27 @@ class _TesteMulaScreenState extends State<TesteMulaScreen> {
       setState(() {
         _log = "Nenhum anúncio";
       });
-
       return;
     }
 
     final anuncio = _cacheMula.last;
 
-    final enviado = await WifiDirectService.enviarAnuncio(anuncio);
+    final enviado = await WifiDirectService.enviarAnuncio(
+      anuncio,
+      "192.168.49.1",
+    );
 
     if (enviado) {
       await MulaService.removerAnuncio(anuncio.id);
 
       setState(() {
         _cacheMula.removeLast();
-
         _anunciosEmCache = List.from(_cacheMula);
-
-        _log = "📤 Anúncio entregue com sucesso";
+        _log = " Anúncio entregue com sucesso";
       });
     } else {
       setState(() {
-        _log = "❌ Falha no envio";
+        _log = " Falha no envio";
       });
     }
   }

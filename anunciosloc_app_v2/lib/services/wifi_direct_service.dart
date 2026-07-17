@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:wifi_iot/wifi_iot.dart';
 import 'package:http/http.dart' as http;
 import '../models/anuncio_p2p.dart';
+import 'dart:io';
+import 'dart:convert';
 
 class WifiDirectService {
   static final WifiDirectService _instance = WifiDirectService._internal();
   factory WifiDirectService() => _instance;
   WifiDirectService._internal();
 
+  ServerSocket? _server;
   bool _isConnected = false;
   String? _deviceName;
   List<Map<String, dynamic>> _discoveredDevices = [];
@@ -234,15 +237,20 @@ class WifiDirectService {
     onStatusChanged?.call('Dados limpos');
   }
 
-  static Future<bool> enviarAnuncio(AnuncioP2P anuncio) async {
+  static Future<bool> enviarAnuncio(
+    AnuncioP2P anuncio,
+    String ipDestino,
+  ) async {
     try {
-      final json = anuncio.toJson();
+      Socket socket = await Socket.connect(ipDestino, 4040);
 
-// aqui vai entrar o socket WiFi Direct
+      socket.write(jsonEncode(anuncio.toJson()));
 
-      print("Enviando anúncio:");
+      await socket.flush();
 
-      print(json);
+      await socket.close();
+
+      print("Anúncio enviado.");
 
       return true;
     } catch (e) {
@@ -261,6 +269,41 @@ class WifiDirectService {
       return AnuncioP2P.fromJson(dados);
     } catch (e) {
       return null;
+    }
+  }
+
+  Future<void> iniciarServidor() async {
+    try {
+      _server = await ServerSocket.bind(
+        InternetAddress.anyIPv4,
+        4040,
+      );
+
+      print("Servidor iniciado.");
+
+      print("IP: ${_server!.address.address}");
+
+      print("Porta: ${_server!.port}");
+
+      _server!.listen((Socket cliente) {
+        print("Novo dispositivo conectado.");
+
+        cliente.listen((dados) {
+          final texto = utf8.decode(dados);
+
+          final anuncio = AnuncioP2P.fromJson(jsonDecode(texto));
+
+          print("Título:");
+
+          print(anuncio.titulo);
+
+          _cacheMula.add(anuncio);
+
+          onAnunciosRecebidos?.call(_cacheMula);
+        });
+      });
+    } catch (e) {
+      print(e);
     }
   }
 }
